@@ -1,5 +1,7 @@
 # panTE
 
+This is outr script to generate a panTE library bases on genome-specific EarlGrey TE libraries. It is heavily inspired in to panEDTA.sh from EDTA
+
 # Installing
 
 First clone out repo:
