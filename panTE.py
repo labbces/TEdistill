@@ -2,6 +2,7 @@ import argparse
 import os
 import re
 import sys
+from Bio import SeqIO
 
 #Define global vars
 suffixes = ['EarlGrey.families.strained', 'EarlGrey.RM.out', 'fna']
@@ -47,14 +48,17 @@ def find_expected_files(path, suffixes,identifiers):
     if countOK == len(identifiers)*len(suffixes):
         return True # All files found
 
-def get_flTE(path,identifiers,strict,max_div,max_ins,max_del,min_cov):
+def get_flTE(path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_copy):
     #Read the RM file and select the TEs that are full length
     #Refactored from find_flTE.pl in EDTA package
-    for identifier in identifiers:
-        out_flTE=f'{path}/{identifier}.flTE.list'
-        filePath = f'{path}/{identifier}.EarlGrey.RM.out'
+    for genomeFilePrefix in genomeFilePrefixes:
+        count_TE_identifiers={}
+        out_flTE=f'{path}/{genomeFilePrefix}.flTE.list'
+        outfa_flTE=f'{path}/{genomeFilePrefix}.flTE.fa'
+        filePath = f'{path}/{genomeFilePrefix}.EarlGrey.RM.out'
+        teSequenceFile = f'{path}/{genomeFilePrefix}.EarlGrey.families.strained'
         print(filePath)
-        with open(filePath, 'r') as f, open(out_flTE, 'w') as o:
+        with open(filePath, 'r') as f:
             # Loop over the input lines.
             for line in f:
                 # Remove parentheses from the line using a regular expression.
@@ -85,20 +89,26 @@ def get_flTE(path,identifiers,strict,max_div,max_ins,max_del,min_cov):
                     chr_, start, end, strand = columns[4], int(columns[5]), int(columns[6]), columns[8]
                     id_, type_, TEleft, TEe, TEs = columns[9], columns[10], int(columns[11]), int(columns[12]), int(columns[13])
 
-                # Skip if type is "Simple_repeat".
-                if type_ == "Simple_repeat":
+                # Skip if type is "Simple_repeat" or "Low_complexity".
+                if type_ == "Simple_repeat" or type_ == "Low_complexity":
                     continue
 
                 # Skip unless SW is a number.
                 if not re.match(r'[0-9]+', str(SW)):
                     continue
 
+                TEidClassFam= f'{id_.lower()}#{type_}'
+
                 # Apply stringent conditions if stringent == 1.
                 if strict == 1:
                     # If stringent, only allow if divergence, insertion, and deletion are all zero.
                     if div == 0 and ins == 0 and del_ == 0:
                         if TEs == 1 and TEleft == 0:
-                            print(line, end='')  # Print the line if the condition is met.
+                            if TEidClassFam in count_TE_identifiers.keys():
+                                count_TE_identifiers[TEidClassFam]+=1
+                            else:
+                                count_TE_identifiers[TEidClassFam]=1
+                            #print(line, end='',file=o)  # Print the line if the condition is met.
                 else:
                     # If not stringent, apply the divergence, insertion, and deletion limits.
                     if div <= max_div and ins <= max_ins and del_ <= max_del:
@@ -108,9 +118,31 @@ def get_flTE(path,identifiers,strict,max_div,max_ins,max_del,min_cov):
                         length = TEe - TEs + 1
                         # Ensure the length/full_length ratio is above the minimum coverage.
                         if length / (full_len + 1) >= min_cov:
-                            print(line, end='',file=o)  # Print the line if the condition is met.
+                            if TEidClassFam in count_TE_identifiers.keys():
+                                count_TE_identifiers[TEidClassFam]+=1
+                            else:
+                                count_TE_identifiers[TEidClassFam]=1
+                            #print(line, end='',file=o)  # Print the line if the condition is met.
+        print(f"Writing full length TEs that appear more than {fl_copy} times in the genome. Outfiles: {out_flTE} and {outfa_flTE}")
+        #indexing TE families fasta
+        TE_fasta = SeqIO.index(teSequenceFile, "fasta")
+        #print(list(TE_fasta.keys()))
+        countTEs=0
+        with open(out_flTE, 'w') as o, open(outfa_flTE, "w") as ofa:
+            for TE in count_TE_identifiers.keys():
+                if count_TE_identifiers[TE] > fl_copy:
+                    if TE in TE_fasta.keys():
+                        countTEs+=1
+                        #create a new identifier that has the countTEs var and pad with 6 zeroes
+                        oldID,teClass=f'{TE}'.split('#')
+                        newID=f'TE_{countTEs:08}#{teClass}'
+                        TE_fasta[TE].id=newID
+                        TE_fasta[TE].description=''
+                        #print(f'{newID}\t{TE_fasta[TE].id}')
+                        SeqIO.write(TE_fasta[TE], ofa, "fasta")                        
+                        print('{TE}\t{newID}',file=o)
 
-
+#Arquivo final *flTE.fa
 def main():
     # Processa os argumentos
     args = parse_arguments()
@@ -127,7 +159,7 @@ def main():
     
     if found_files:
         print("Arquivos correspondentes encontrados.")
-        get_flTE(args.path,genomeFilePrefixes,args.strict,args.div,args.ins,args.dele,args.cov)
+        get_flTE(args.path,genomeFilePrefixes,args.strict,args.div,args.ins,args.dele,args.cov,args.fl_copy)
     else:
         print("Some files are missing. Check your input.")
 
