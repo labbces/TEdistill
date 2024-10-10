@@ -4,17 +4,25 @@ This is our script to generate a panTE library based on genome-specific EarlGrey
 
 # Installing
 
-First clone out repo:
+Create a python environment in which to install some dependencies, as biopython
 
 ```
-  git clone git@github.com:labbces/panTE.git
+python -m venv .venv
+. ./.venv/bin/activate 
+pip install biopython
+```
+
+Then, clone out repo:
+
+```
+git clone git@github.com:labbces/panTE.git
 ```
 
 Then cd into the repo and add submodules
 
 ```
-  git submodule init
-  git submodule update
+git submodule init
+git submodule update
 ```
 
 This will add out own copy of the EDTA repository, as we are using some of their scripts to generate the panTE
