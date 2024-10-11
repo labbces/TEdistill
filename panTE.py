@@ -140,7 +140,7 @@ def get_flTE(path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_c
                         TE_fasta[TE].description=''
                         #print(f'{newID}\t{TE_fasta[TE].id}')
                         SeqIO.write(TE_fasta[TE], ofa, "fasta")                        
-                        print('{TE}\t{newID}',file=o)
+                        print(f'{TE}\t{newID}',file=o)
 
 #Arquivo final *flTE.fa
 def main():
