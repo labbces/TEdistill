@@ -8,6 +8,7 @@ from Bio.SeqRecord import SeqRecord
 import shutil
 import subprocess
 
+#TODO removing IDX files and pre-pan file before running the script
 #Define global vars
 suffixes = ['EarlGrey.families.strained', 'EarlGrey.RM.out', 'fna']
 
