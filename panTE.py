@@ -287,13 +287,15 @@ def join_and_rename(path,genomeFilePrefixes):
     out_flTE=f'{path}/pre_panTE.flTE.fa'
     for genomeFilePrefix in genomeFilePrefixes:
         in_flTE=f'{path}/{genomeFilePrefix}.flTE.fa'
-        with open(in_flTE,'r') as f, open(out_flTE,'a') as o:
+        mapids_flTE = f'{path}/{genomeFilePrefix}.flTE.mapids'
+        with open(mapids_flTE, 'w') as map_file, open(in_flTE,'r') as f, open(out_flTE,'a') as o:
             for record in SeqIO.parse(f, "fasta"):
                 # print(record.id)
                 countTEs+=1
                 #create a new identifier that has the countTEs var and pad with 6 zeroes
                 oldID,teClass=f'{record.id}'.split('#')
                 newID=f'TE_{countTEs:08}#{teClass}'
+                map_file.write(f"{oldID}\t{teClass}\t{newID}\n")
                 newrecord = SeqRecord(
                     record.seq,
                     id=newID,
