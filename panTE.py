@@ -31,9 +31,9 @@ def parse_arguments():
     parser.add_argument('-v', '--cov', default=0.8, type=float, help='Minimum coverage allowed. Default is 0.8.')
     parser.add_argument('--iter', default=1, type=int, help='Number of iterations to detect nested sequences. Default is 1.')
     parser.add_argument('--minhsplen', default=80, type=int, help='Minimum HSP length. Default is 80 (bp).')
-    parser.add_argument('--minhspident', default=80, type=int, help='Minimum HSP identity. Default is 80 (%).')
+    parser.add_argument('--minhspident', default=80, type=int, help='Minimum HSP identity. Default is 80 (%%).')
     parser.add_argument('--minlen', default=80, type=int, help='Minimum length of the cleaned sequence to retain. Default is 80 (bp).')
-    parser.add_argument('--minident', default=80, type=int, help='Minimum identity of the cleaned sequence to retain. Default is 80 (%).')
+    parser.add_argument('--minident', default=80, type=int, help='Minimum identity of the cleaned sequence to retain. Default is 80 (%%).')
 
     return parser.parse_args()
 
