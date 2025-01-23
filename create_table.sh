@@ -52,8 +52,9 @@ for SPECIES_NAME in "${SPECIES[@]}"; do
 
         echo "Resultado salvo em $OUTPUT_FILE"
 
-        # Adiciona os dados ao arquivo combinado (ignorar cabeçalho dos arquivos individuais)
-        tail -n +2 "$OUTPUT_FILE" | dos2unix | awk -v species="$SPECIES_NAME" -F',' 'BEGIN {OFS=","} {print $1, $2, $3, "\"" $4 "\"", species}' >> "$COMBINED_FILE"
+        ###DMRPÇ No need to join several species, that should be done by the panTE.py script DELETE the following two lines
+        ###DMRP # Adiciona os dados ao arquivo combinado (ignorar cabeçalho dos arquivos individuais)
+        ###DMRP tail -n +2 "$OUTPUT_FILE" | dos2unix | awk -v species="$SPECIES_NAME" -F',' 'BEGIN {OFS=","} {print $1, $2, $3, "\"" $4 "\"", species}' >> "$COMBINED_FILE"
     else
         echo "Arquivos faltando para $SPECIES_NAME. Pulando..."
     fi
