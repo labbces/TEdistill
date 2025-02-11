@@ -20,8 +20,10 @@ def parse_arguments():
     
     parser.add_argument('-l', '--prefix_list', default='genome.list',
                         help='Text file with a list of genome file prefixes. Default is "genome.list".')
-    parser.add_argument('-p', '--path', required=True, 
-                        help='Path to input files.')
+    parser.add_argument('--in_path', required=True, 
+                        help='Path to folder with input files.')
+    parser.add_argument('--out_path', required=True,
+                        help='Output folder.')
     parser.add_argument('-c', '--fl_copy', default=3, type=int, help='Number of copies of the TE family in the genome. Default is 3.')
     parser.add_argument('-s', '--strict', action='store_true', default=False, 
                         help='Use strict parameters for full length TE identification. Boolean. Default is False.')
@@ -48,11 +50,11 @@ def read_identifiers(file):
         print(f'File {file} not found.')
         return []
 
-def find_expected_files(path, suffixes,identifiers):
+def find_expected_files(in_path, suffixes,identifiers):
     countOK=0
     for identifier in identifiers:
         for suffix in suffixes:
-            filePath = f'{path}/{identifier}.{suffix}'
+            filePath = f'{in_path}/{identifier}.{suffix}'
             if os.path.exists(filePath):
                 countOK+=1
             else:
@@ -60,15 +62,15 @@ def find_expected_files(path, suffixes,identifiers):
     if countOK == len(identifiers)*len(suffixes):
         return True # All files found
 
-def get_flTE(path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_copy,iteration,minhsplen,minhspident,minlen):
+def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_copy,iteration,minhsplen,minhspident,minlen):
     #Read the RM file and select the TEs that are full length
     #Refactored from find_flTE.pl in EDTA package
     for genomeFilePrefix in genomeFilePrefixes:
         count_TE_identifiers={}
-        out_flTE=f'{path}/{genomeFilePrefix}.flTE.list'
-        outfa_flTE=f'{path}/{genomeFilePrefix}.flTE.fa'
-        filePath = f'{path}/{genomeFilePrefix}.EarlGrey.RM.out'
-        teSequenceFile = f'{path}/{genomeFilePrefix}.EarlGrey.families.strained'
+        out_flTE=f'{out_path}/{genomeFilePrefix}.flTE.list'
+        outfa_flTE=f'{out_path}/{genomeFilePrefix}.flTE.fa'
+        filePath = f'{in_path}/{genomeFilePrefix}.EarlGrey.RM.out'
+        teSequenceFile = f'{in_path}/{genomeFilePrefix}.EarlGrey.families.strained'
         print(filePath)
         with open(filePath, 'r') as f:
             # Loop over the input lines.
@@ -159,17 +161,17 @@ def get_flTE(path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_c
         
 #Arquivo final *flTE.fa
 
-def remove_nested_sequences(path, iteration,minhsplen,minhspident,minlen):
+def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,minlen):
     keep_TEs={}
     touched_TEs={}
     #Remove nested sequences from the flTE.fa file
-    flTE=f'{path}/pre_panTE.flTE.fa'
+    flTE=f'{out_path}/pre_panTE.flTE.fa'
     
     print(f'REMOVING NESTED SEQUENCES {flTE}\t{iteration}')
 
     for iter in range(0, int(iteration)):
-        fileiter=f'{path}/panTE.flTE.iter{iter}.fa'
-        fileiteridx=f'{path}/panTE.flTE.iter{iter}.fa.idx'
+        fileiter=f'{out_path}/panTE.flTE.iter{iter}.fa'
+        fileiteridx=f'{out_path}/panTE.flTE.iter{iter}.fa.idx'
 
         shutil.copy(flTE, fileiter)
         #TODO: Fix this shoudl not copy the original file
@@ -197,11 +199,11 @@ def remove_nested_sequences(path, iteration,minhsplen,minhspident,minlen):
                 sequence_id2 = sequence_id.split("#")[0]
 
             # Write the sequence to a temporary file for BLAST input
-            temp_fasta = f"{path}/temp_{sequence_id2}.fasta"
+            temp_fasta = f"{out_path}/temp_{sequence_id2}.fasta"
             with open(temp_fasta, "w") as temp_file:
                 SeqIO.write(fasta_dict[sequence_id], temp_file, "fasta")
             # Run BLAST for each sequence
-            output_blast_file = os.path.join(path, f"{sequence_id2}_blast_result.txt")
+            output_blast_file = os.path.join(out_path, f"{sequence_id2}_blast_result.txt")
 
             blast_command = [
                 'blastn',  # or 'blastp' depending on your type of sequences
@@ -281,13 +283,13 @@ def remove_nested_sequences(path, iteration,minhsplen,minhspident,minlen):
         #     with open(outPan, "a") as o:
         #         SeqIO.write(newrecord, o, "fasta")
 
-def join_and_rename(path,genomeFilePrefixes):
+def join_and_rename(in_path,out_path,genomeFilePrefixes):
     countTEs=0
     
-    out_flTE=f'{path}/pre_panTE.flTE.fa'
+    out_flTE=f'{out_path}/pre_panTE.flTE.fa'
     for genomeFilePrefix in genomeFilePrefixes:
-        in_flTE=f'{path}/{genomeFilePrefix}.flTE.fa'
-        mapids_flTE = f'{path}/{genomeFilePrefix}.flTE.mapids'
+        in_flTE=f'{out_path}/{genomeFilePrefix}.flTE.fa'
+        mapids_flTE = f'{out_path}/{genomeFilePrefix}.flTE.mapids'
         with open(mapids_flTE, 'w') as map_file, open(in_flTE,'r') as f, open(out_flTE,'a') as o:
             for record in SeqIO.parse(f, "fasta"):
                 # print(record.id)
@@ -319,13 +321,13 @@ def main():
         return
     
     # Encontra arquivos correspondentes
-    found_files = find_expected_files(args.path, suffixes, genomeFilePrefixes)
+    found_files = find_expected_files(args.in_path, suffixes, genomeFilePrefixes)
     
     if found_files:
         print("Arquivos correspondentes encontrados.")
-        get_flTE(args.path,genomeFilePrefixes,args.strict,args.div,args.ins,args.dele,args.cov,args.fl_copy,args.iter,args.minhsplen, args.minhspident,args.minlen)
-        join_and_rename(args.path,genomeFilePrefixes)
-        remove_nested_sequences(args.path,args.iter,args.minhsplen,args.minhspident,args.minlen)
+        get_flTE(args.in_path,args.out_path,genomeFilePrefixes,args.strict,args.div,args.ins,args.dele,args.cov,args.fl_copy,args.iter,args.minhsplen, args.minhspident,args.minlen)
+        join_and_rename(args.in_path,args.out_path,genomeFilePrefixes)
+        remove_nested_sequences(args.in_path,args.out_path,args.iter,args.minhsplen,args.minhspident,args.minlen)
     else:
         print("Some files are missing. Check your input.")
     
