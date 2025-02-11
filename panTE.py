@@ -104,7 +104,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                     id_, type_, TEleft, TEe, TEs = columns[9], columns[10], int(columns[11]), int(columns[12]), int(columns[13])
 
                 # Skip if type is "Simple_repeat" or "Low_complexity".
-                if type_ == "Simple_repeat" or type_ == "Low_complexity":
+                if type_ == "Simple_repeat" or type_ == "Low_complexity" or type_ == "Satellite":
                     continue
 
                 # Skip unless SW is a number.
@@ -186,13 +186,14 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
                 # Run the command
         try:
             result = subprocess.run(makeblastdb, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print(f"makeblastdb ran successfully on file {fileiter}")
+            print(f"makeblastdb ran successfully on file {fileiter} during iteration {iter}")
             #print(result.stdout.decode())  # Print the standard output (if any)
         except subprocess.CalledProcessError as e:
             print(f"Error running makeblastdb: {e}")
             print(e.stderr.decode())  # Print the standard error (if any)
         
         # Run blastn
+        #TODO 11/02/2025 Check how to parallelize this block
         for sequence_id in fasta_dict.keys():
             sequence_id2=''
             if "#" in sequence_id:
@@ -218,7 +219,7 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
             # Run the BLAST command
             try:
                 subprocess.run(blast_command, check=True)
-                print(f"BLAST completed for sequence {sequence_id}. Results saved to {output_blast_file}")
+                print(f"BLAST completed for sequence {sequence_id} in iteration {iter}. Results saved to {output_blast_file}")
             except subprocess.CalledProcessError as e:
                 print(f"Error running BLAST for sequence {sequence_id}: {e}")
     
@@ -268,20 +269,23 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
                     subjectseq_str=''.join(subjectseq)
                     #remove R letters from the sequence
                 subjectseq_str=subjectseq_str.replace('R','')
-                if (len(subjectseq_str) > minlen and len(subjectseq_str) < len(fasta_dict[subject].seq)):
+                if (len(subjectseq_str) >= minlen and len(subjectseq_str) < len(fasta_dict[subject].seq)):
                     keep_TEs[subject]=subjectseq_str
                     touched_TEs[subject]=1
+                if (len(subjectseq_str) < minlen):
+                    #If sequence is too short put in touched_TEs to skip it if appears again in BLASST results within the same iteration
+                    touched_TEs[subject]=1 
 
         #Write the sequences that passed the filter
-        # outPan=f'{path}/panTE.flTE.iter{iter+1}.fa'
-        # for TE in keep_TEs.keys():
-        #     newrecord = SeqRecord(
-        #         Seq(keep_TEs[TE]),
-        #         id=TE,
-        #         description=''
-        #     )
-        #     with open(outPan, "a") as o:
-        #         SeqIO.write(newrecord, o, "fasta")
+        outPan=f'{out_path}/panTE.flTE.iter{iter+1}.fa'
+        for TE in keep_TEs.keys():
+            newrecord = SeqRecord(
+                Seq(keep_TEs[TE]),
+                id=TE,
+                description=''
+            )
+            with open(outPan, "a") as o:
+                SeqIO.write(newrecord, o, "fasta")
 
 def join_and_rename(in_path,out_path,genomeFilePrefixes):
     countTEs=0
