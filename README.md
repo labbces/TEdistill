@@ -1,6 +1,6 @@
 # panTE
 
-This is our script to generate a panTE library based on genome-specific EarlGrey TE libraries. It is an adaptarion of [panEDTA.sh](https://github.com/oushujun/EDTA/blob/master/panEDTA.sh), from [EDTA](https://github.com/oushujun/EDTA/), and their perl scripts
+This is our script to generate a panTE library based on genome-specific EarlGrey TE libraries. It is an adaptation of [panEDTA.sh](https://github.com/oushujun/EDTA/blob/master/panEDTA.sh), from [EDTA](https://github.com/oushujun/EDTA/), and their perl scripts
 
 # Installing
 
