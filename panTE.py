@@ -263,6 +263,9 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
             for subject in hsps.keys():
                 for hsp in hsps[subject]:
                     ssstart, ssend = hsp
+                    if subject not in fasta_dict.keys():
+                        print(f'{subject} missing from file {fileiter}')
+                        continue
                     subjectseq=list(fasta_dict[subject].seq)
                     subjectseq[sstart:send] = ['R'] * ((send - sstart) + 1)
                     # print(subjectseq)
