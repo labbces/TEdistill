@@ -2,8 +2,8 @@
 #$ -q all.q
 #$ -cwd
 #$ -V
-#$ -pe smp 10
-#$ -l h=neotera
+#$ -pe smp 15
+#$ -l h=figsrv
 echo $NSLOTS
 
 #Load required modules
@@ -27,7 +27,7 @@ fi
 OUTPUT_BASE_DIR="/Storage/data2/andreza.cunha/results/PanTE"
 
 #Number of max iterations for loop
-MAX_ITER=5
+MAX_ITER=1
 
 #Input directory and genome list
 INPUT_DIR="/Storage/data2/andreza.cunha/repositories/panTE.old/test/input_files"
@@ -44,7 +44,7 @@ cd "$OUTPUT_DIR" || { echo "Failed to access the $OUTPUT_DIR"; exit 1; }
     
 
 #Run python script
-python3 /Storage/data2/andreza.cunha/repositories/panTE/panTE.py --in_path "$INPUT_DIR" \
+python3 -u /Storage/data2/andreza.cunha/repositories/panTE/panTE.py --in_path "$INPUT_DIR" \
                      --out_path "$OUTPUT_DIR" \
                      -l "$GENOME_LIST" \
                      -c 3 \
