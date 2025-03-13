@@ -168,12 +168,11 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
     flTE=f'{out_path}/pre_panTE.flTE.fa'
     
     print(f'REMOVING NESTED SEQUENCES {flTE}\t{iteration}')
-
+    shutil.copy(flTE, f'{out_path}/panTE.flTE.iter0.fa')
     for iter in range(0, int(iteration)):
         fileiter=f'{out_path}/panTE.flTE.iter{iter}.fa'
         fileiteridx=f'{out_path}/panTE.flTE.iter{iter}.fa.idx'
 
-        shutil.copy(flTE, fileiter)
         #TODO: Fix this shoudl not copy the original file
 
         #Indexing fasta file for easy sequence retrieval
@@ -183,7 +182,7 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
                 'makeblastdb',
                 '-in', fileiter, 
                 '-dbtype', 'nucl']
-                # Run the command
+        # Run the command
         try:
             result = subprocess.run(makeblastdb, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print(f"makeblastdb ran successfully on file {fileiter} during iteration {iter}")
