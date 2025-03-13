@@ -173,8 +173,6 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
         fileiter=f'{out_path}/panTE.flTE.iter{iter}.fa'
         fileiteridx=f'{out_path}/panTE.flTE.iter{iter}.fa.idx'
 
-        #TODO: Fix this shoudl not copy the original file
-
         #Indexing fasta file for easy sequence retrieval
         fasta_dict = SeqIO.index_db(fileiteridx, fileiter, "fasta")
     
