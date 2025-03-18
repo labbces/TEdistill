@@ -15,7 +15,7 @@ suffixes = ['EarlGrey.families.strained', 'EarlGrey.RM.out', 'fna']
 #Example run
 #python3 panTE.py -p /home/eduardo/Documentos/panTE/ -l genome.list -c 3 -d 20 -i 10 -e 10 -v 0.8
 def parse_arguments():
-    # Configurando os argumentos
+    #Configuring arguments
     parser = argparse.ArgumentParser(description='Generates a panTE file from genome-specific runs of TE annotation')
     
     parser.add_argument('-l', '--prefix_list', default='genome.list',
@@ -41,7 +41,7 @@ def parse_arguments():
 
 
 def read_identifiers(file):
-    # Lê os identificadores do arquivo
+    #Read the identifiers from the file
     try:
         with open(file, 'r') as f:
             prefixes = [line.strip() for line in f.readlines()]
@@ -60,7 +60,7 @@ def find_expected_files(in_path, suffixes,identifiers):
             else:
                 print(f"File not found: {filePath}")
     if countOK == len(identifiers)*len(suffixes):
-        return True # All files found
+        return True #All files found
 
 def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_copy,iteration,minhsplen,minhspident,minlen):
     #Read the RM file and select the TEs that are full length
@@ -73,17 +73,16 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
         teSequenceFile = f'{in_path}/{genomeFilePrefix}.EarlGrey.families.strained'
         print(filePath)
         with open(filePath, 'r') as f:
-            # Loop over the input lines.
+            #Loop over the input lines.
             for line in f:
-                # Remove parentheses from the line using a regular expression.
+                #Remove parentheses from the line using a regular expression.
                 line = re.sub(r'[\(\)]+', '', line)
 
-                # Skip empty lines or lines with only whitespace.
+                #Skip empty lines or lines with only whitespace.
                 if re.match(r'^\s*$', line):
                     continue
 
-                # Split the line by whitespace and capture specific columns into variables.
-
+                #Split the line by whitespace and capture specific columns into variables.
                 columns = line.split()
                 if len(columns) < 14:
                     continue
@@ -103,19 +102,19 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                     chr_, start, end, strand = columns[4], int(columns[5]), int(columns[6]), columns[8]
                     id_, type_, TEleft, TEe, TEs = columns[9], columns[10], int(columns[11]), int(columns[12]), int(columns[13])
 
-                # Skip if type is "Simple_repeat" or "Low_complexity" or "Satellite".
+                #Skip if type is "Simple_repeat" or "Low_complexity" or "Satellite".
                 if type_ == "Simple_repeat" or type_ == "Low_complexity" or type_ == "Satellite":
                     continue
 
-                # Skip unless SW is a number.
+                #Skip unless SW is a number.
                 if not re.match(r'[0-9]+', str(SW)):
                     continue
 
                 TEidClassFam= f'{id_.lower()}#{type_}'
 
-                # Apply stringent conditions if stringent == 1.
+                #Apply stringent conditions if stringent == 1.
                 if strict == 1:
-                    # If stringent, only allow if divergence, insertion, and deletion are all zero.
+                    #If stringent, only allow if divergence, insertion, and deletion are all zero.
                     if div == 0 and ins == 0 and del_ == 0:
                         if TEs == 1 and TEleft == 0:
                             if TEidClassFam in count_TE_identifiers.keys():
@@ -124,13 +123,13 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                                 count_TE_identifiers[TEidClassFam]=1
                             #print(line, end='',file=o)  # Print the line if the condition is met.
                 else:
-                    # If not stringent, apply the divergence, insertion, and deletion limits.
+                    #If not stringent, apply the divergence, insertion, and deletion limits.
                     if div <= max_div and ins <= max_ins and del_ <= max_del:
                         full_len, length = 0, 0
-                        # Calculate full length and actual length for strand "+".
+                        #Calculate full length and actual length for strand "+".
                         full_len = TEe + TEleft
                         length = TEe - TEs + 1
-                        # Ensure the length/full_length ratio is above the minimum coverage.
+                        #Ensure the length/full_length ratio is above the minimum coverage.
                         if length / (full_len + 1) >= min_cov:
                             if TEidClassFam in count_TE_identifiers.keys():
                                 count_TE_identifiers[TEidClassFam]+=1
@@ -138,7 +137,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                                 count_TE_identifiers[TEidClassFam]=1
                             #print(line, end='',file=o)  # Print the line if the condition is met.
         print(f"Writing full length TEs that appear more than {fl_copy} times in the genome. Outfiles: {out_flTE} and {outfa_flTE}")
-        #indexing TE families fasta
+        #Indexing TE families fasta
         TE_fasta = SeqIO.index(teSequenceFile, "fasta")
         #print(list(TE_fasta.keys()))
         countTEs=0
@@ -148,7 +147,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                 if count_TE_identifiers[TE] > fl_copy:
                     if TE in TE_fasta.keys():
                         countTEs+=1
-                        #create a new identifier that has the countTEs var and pad with 6 zeroes
+                        #Create a new identifier that has the countTEs var and pad with 6 zeroes
                         oldID,teClass=f'{TE}'.split('#')
                         newID=f'TE_{countTEs:08}#{teClass}'
                         TE_fasta[TE].id=newID
@@ -159,11 +158,16 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                     else:
                         print(f"TE {TE} not found in the TE fasta file")
         
-#Arquivo final *flTE.fa
+#Final file *flTE.fa
 
 def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,minlen):
     keep_TEs={}
     touched_TEs={}
+
+    #Create folder for BLAST files
+    blast_output_dir = os.path.join(out_path, "blast_results")
+    os.mkdirs(blast_output_dir, exist_ok=True)
+
     #Remove nested sequences from the flTE.fa file
     flTE=f'{out_path}/pre_panTE.flTE.fa'
     
@@ -180,7 +184,7 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
                 'makeblastdb',
                 '-in', fileiter, 
                 '-dbtype', 'nucl']
-        # Run the command
+        #Run the command
         try:
             result = subprocess.run(makeblastdb, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print(f"makeblastdb ran successfully on file {fileiter} during iteration {iter}")
@@ -189,45 +193,45 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
             print(f"Error running makeblastdb: {e}")
             print(e.stderr.decode())  # Print the standard error (if any)
         
-        # Run blastn
+        #Run blastn
         #TODO 11/02/2025 Check how to parallelize this block
         for sequence_id in fasta_dict.keys():
             sequence_id2=''
             if "#" in sequence_id:
                 sequence_id2 = sequence_id.split("#")[0]
 
-            # Write the sequence to a temporary file for BLAST input
-            temp_fasta = f"{out_path}/temp_{sequence_id2}.fasta"
+            #Write the sequence to a temporary file for BLAST input
+            temp_fasta = os.path.join(blast_output_dir, f"temp_{sequence_id2}.fasta")
             with open(temp_fasta, "w") as temp_file:
                 SeqIO.write(fasta_dict[sequence_id], temp_file, "fasta")
-            # Run BLAST for each sequence
+            #Run BLAST for each sequence
             output_blast_file = os.path.join(out_path, f"{sequence_id2}_blast_result.txt")
 
             blast_command = [
-                'blastn',  # or 'blastp' depending on your type of sequences
+                'blastn',  #Or 'blastp' depending on your type of sequences
                 '-query', temp_fasta,
-                '-db', fileiter, # Specify your BLAST database
+                '-db', fileiter, #Specify your BLAST database
                 '-out', output_blast_file,
-                '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send qlen slen',  # Output format (tabular)
-                '-evalue', '1e-5',  # Adjust E-value threshold as needed
+                '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send qlen slen',  #Output format (tabular)
+                '-evalue', '1e-5',  #Adjust E-value threshold as needed
                 '-word_size', '7',
                 '-dust',  'no'
             ]
-            # Run the BLAST command
+            #Run the BLAST command
             try:
                 subprocess.run(blast_command, check=True)
                 print(f"BLAST completed for sequence {sequence_id} in iteration {iter}. Results saved to {output_blast_file}")
             except subprocess.CalledProcessError as e:
                 print(f"Error running BLAST for sequence {sequence_id}: {e}")
     
-            #remove the temporary fasta file
+            #Remove the temporary fasta file
             os.remove(temp_fasta)
 
             #Process the BLAST output
             with open(output_blast_file, "r") as blast_output:
                 hsps={}
                 for line in blast_output:
-                    # Split the line by tab
+                    #Split the line by tab
                     columns = line.strip().split("\t")
                     qseqid=columns[0] 
                     sseqid=columns[1]
@@ -265,9 +269,9 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
                         continue
                     subjectseq=list(fasta_dict[subject].seq)
                     subjectseq[sstart:send] = ['R'] * ((send - sstart) + 1)
-                    # print(subjectseq)
+                    #print(subjectseq)
                     subjectseq_str=''.join(subjectseq)
-                    #remove R letters from the sequence
+                    #Remove R letters from the sequence
                 subjectseq_str=subjectseq_str.replace('R','')
                 if (len(subjectseq_str) >= minlen and len(subjectseq_str) < len(fasta_dict[subject].seq)):
                     keep_TEs[subject]=subjectseq_str
@@ -296,9 +300,9 @@ def join_and_rename(in_path,out_path,genomeFilePrefixes):
         mapids_flTE = f'{out_path}/{genomeFilePrefix}.flTE.mapids'
         with open(mapids_flTE, 'w') as map_file, open(in_flTE,'r') as f, open(out_flTE,'a') as o:
             for record in SeqIO.parse(f, "fasta"):
-                # print(record.id)
+                #print(record.id)
                 countTEs+=1
-                #create a new identifier that has the countTEs var and pad with 6 zeroes
+                #Create a new identifier that has the countTEs var and pad with 6 zeroes
                 oldID,teClass=f'{record.id}'.split('#')
                 newID=f'TE_{countTEs:08}#{teClass}'
                 map_file.write(f"{oldID}\t{teClass}\t{newID}\n")
@@ -310,21 +314,21 @@ def join_and_rename(in_path,out_path,genomeFilePrefixes):
                 SeqIO.write(newrecord, o, "fasta")    
 
 def main():
-    # Processa os argumentos
+    #Processes arguments
     args = parse_arguments()
     
-    # Verifica se o programa BLAST+ está instalado
+    #Verify if BLAST+ is installed
     blast_path = shutil.which("makeblastdb")
     if not blast_path:
         print(f"makeblastdb is not found in the PATH. Please install BLAST+, before continuing.")
-    # Lê os identificadores do arquivo
+    #Read file identifiers
     genomeFilePrefixes = read_identifiers(args.prefix_list)
     
     if not genomeFilePrefixes:
         print("Nenhum identificador encontrado.")
         return
     
-    # Encontra arquivos correspondentes
+    #Finds matching files
     found_files = find_expected_files(args.in_path, suffixes, genomeFilePrefixes)
     
     if found_files:
