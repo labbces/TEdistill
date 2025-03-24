@@ -177,7 +177,7 @@ def blast_seq(sequence_id, sequence, blast_output_dir, keep_TEs, touched_TEs, mi
     with open(temp_fasta, "w") as temp_file:
         SeqIO.write(sequence, temp_file, "fasta")
     #Run BLAST for each sequence
-    output_blast_file = os.path.join(out_path, f"{sequence_id2}_blast_result_{iter}.txt")
+    output_blast_file = os.path.join(blast_output_dir, f"{sequence_id2}_blast_result_{iter}.txt")
 
     blast_command = [
         'blastn',  #Or 'blastp' depending on your type of sequences
