@@ -330,12 +330,12 @@ def remove_nested_sequences(in_path, out_path, iteration, minhsplen, minhspident
         num_workers = min(nproc, len(fasta_dict))
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
             if verbose > 0:
-                print(f'running blast in parallel with {len(fasta_dict)} sequences')
+                print(f'running blast in parallel with {len(fasta_dict)} sequences during iteration {iter}')
             executor.map(blast_wrapper, list(fasta_dict.keys()))
 
         # Write surviving sequences
         outPan = f'{out_path}/panTE.flTE.iter{iter+1}.fa'
-        print(f'Writing surviving sequences to {outPan}')
+        print(f'Writing surviving sequences to {outPan} iteration {iter}')
         with open(outPan, "w") as o:
             for TE_id, sequence in keep_TEs.items():
                 new_record = SeqRecord(sequence if isinstance(sequence, Seq) else Seq(sequence), id=TE_id, description='')
