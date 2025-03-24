@@ -1,2 +1,5 @@
 .venv/
 EDTA/
+time.parallel
+.gitignore
+time.serial
