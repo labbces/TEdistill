@@ -7,7 +7,6 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import shutil
 import subprocess
-import concurrent.futures
 
 #TODO removing IDX files and pre-pan file before running the script
 #Define global vars
@@ -219,7 +218,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
                 continue
             if length <= minhsplen:
                 keep_TEs[qseqid]=fasta_dict[qseqid].seq
-                print(blast_output)
+                # print(blast_output)
                 continue
             if pident <= minhspident:
                 keep_TEs[qseqid]=fasta_dict[qseqid].seq
