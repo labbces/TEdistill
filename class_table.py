@@ -30,6 +30,7 @@ def main():
 			if columns[1].lower() == columns[2].lower() and columns[1].lower() == columns[3].lower():
 				print(f'{columns[0]}\t{columns[1]}', file=o)
 			
+			#LTRs
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI LTR Gypsy" and columns[3].startswith("LTR/Gypsy"):
 				print(f'{columns[0]}\t{columns[3]}', file=o)
 			elif columns[1] == "Unknown" and columns[2] == "ClassI LTR Gypsy" and columns[3].startswith("LTR/Gypsy"):
@@ -46,10 +47,20 @@ def main():
 				print(f'{columns[0]}\t{columns[3]}', file=o)
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("LTR/Gypsy"):
 				print(f'{columns[0]}\t{columns[3]}', file=o)
-			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("LTR/Gypsy"):
-				print(f'{columns[0]}\t{columns[3]}', file=o)
-			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("LTR/Gypsy"):
-				print(f'{columns[0]}\t{columns[3]}', file=o)
+			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("Unknown"):
+				print(f'{columns[0]}\t{columns[1]}', file=o)
+                        elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI" and columns [3].startswih("LTR/Gypsy"):
+				print(f'{columns[0]\t{columns[3]}}',file=o)
+			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassII DNA hAT MITE" and columns [3].startswih("LTR/Gypsy"):
+                                print(f'{columns[0]\t{columns[3]}}',file=o)
+			elif columns[1] == "" and columns[2] == "" and columns [3].startswih(""):
+                                print(f'{columns[0]\t{columns[3]}}',file=o)
+			
+			#TIR
+			elif columns[1] == "DNA/PIF-Harbinger" and columns[2] == "ClassII DNA hAT nMITE" and columns [3].startswih("TIR/PIF_Harbinger"):
+                                print(f'{columns[0]\t{columns[3]}}',file=o)
+
+			#The CACTA
 			elif columns[1] == "DNA/CMC-EnSpm" and columns[2].startswith("ClassII DNA CACTA") and columns[3].startswith("TIR/EnSpm_CACTA/"):#EnSpm_CACTA is the same as CMC-EnSpm following https://www.jstage.jst.go.jp/article/ggs/94/6/94_18-00024/_html/-char/en
 				print(f'{columns[0]}\t{columns[3]}', file=o)
 			elif columns[1] == "DNA/CMC-EnSpm" and 'CACTA' not in columns[2] and columns[2].startswith("ClassII DNA ") and columns[3].startswith("TIR/EnSpm_CACTA/"):#EnSpm_CACTA is the same as CMC-EnSpm following https://www.jstage.jst.go.jp/article/ggs/94/6/94_18-00024/_html/-char/en
