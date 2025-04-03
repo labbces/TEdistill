@@ -217,11 +217,11 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
             if (qseqid == sseqid):
                 continue
             if length <= minhsplen:
-                keep_TEs[qseqid]=fasta_dict[qseqid].seq
+                #keep_TEs[qseqid]=fasta_dict[qseqid].seq # Ignore sequence smaller than minhsplen
                 # print(blast_output)
                 continue
             if pident <= minhspident:
-                keep_TEs[qseqid]=fasta_dict[qseqid].seq
+                # keep_TEs[qseqid]=fasta_dict[qseqid].seq # Ignore sequences with Identity smaller than minhspident
                 continue
             if sstart > send:
                 sstart, send = send, sstart
