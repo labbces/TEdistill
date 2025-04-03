@@ -246,6 +246,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         length_hsp_merged=subjectseq_str.count('R')
         qcov = length_hsp_merged/qlen
         scov = length_hsp_merged/slen
+        #TODO: Teste teh following code, with and without the if coverage
         if qcov >= coverage and scov >= coverage:
             subjectseq_str=subjectseq_str.replace('R','')
             if (len(subjectseq_str) >= minlen and len(subjectseq_str) < len(fasta_dict[subject].seq)):
