@@ -239,6 +239,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
             #print(subjectseq)
             subjectseq_str=''.join(subjectseq)
             #Remove R letters from the sequence
+        length_hsp_merged=subjectseq_str.count('R')
         subjectseq_str=subjectseq_str.replace('R','')
         if (len(subjectseq_str) >= minlen and len(subjectseq_str) < len(fasta_dict[subject].seq)):
             keep_TEs[subject]=subjectseq_str
