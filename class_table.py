@@ -8,12 +8,21 @@ def parse_arguments():
 	parser = argparse.ArgumentParser(description='Compair different TE classification methods and create a consensus.')
 
 	parser.add_argument('-i', '--input_file', help='Path to input file.')
+	parser.add_argument('-d', '--deepte_domain', help='Path to input file of DeepTE domain file.')
 	parser.add_argument('-o', '--output_file', help='Path to output file.')
 
 	return parser.parse_args()
 
 def main():
 	args = parse_arguments()
+	deeptedomains = {}
+
+	with open(args.deepte_domain, "r") as d:
+		for line in d:
+			line=line.rstrip()
+			columns=line.split()
+			deeptedomains[columns[0]] = columns[1]
+			continue
 
 	with open(args.input_file, "r") as f , open(args.output_file, "w") as o:
 	
@@ -98,6 +107,8 @@ def main():
 					print(f'{columns[0]}\tTIR/MuDR/Mutator *MITE', file=o) #TODO revisar se é correcto, MITe vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183
 				elif 'Harbinger' in columns[2]:
 					print(f'{columns[0]}\tTIR/PIF/Harbinger *MITE', file=o) #TODO revisar se é correcto, MITe vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183							
+			elif columns[1] == 'Unknown' and columns[3] == 'Unknown' and columns[2].startswith("ClassI LTR") and columns[0] not in deeptedomains.key():
+					print(f'{columns[0]}\tUnknown', file=o)
 			else:
 				print(line)
 
