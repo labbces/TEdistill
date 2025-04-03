@@ -48,13 +48,13 @@ def main():
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("LTR/Gypsy"):
 				print(f'{columns[0]}\t{columns[3]}', file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("Unknown"):
-				print(f'{columns[0]}\t{columns[1]}', file=o)
+				print(f'{columns[0]}\t{columns[1]}/unknown', file=o)
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI" and columns[3].startswith("LTR/Gypsy"):
 				print(f'{columns[0]}\t{columns[3]}',file=o)
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassII DNA hAT MITE" and columns[3].startswith("LTR/Gypsy"):
 				print(f'{columns[0]}\t{columns[3]}',file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("Unknown"):
-				print(f'{columns[0]}\t{columns[1]}',file=o)
+				print(f'{columns[0]}\t{columns[1]}/unknown',file=o)
 			
 			#TIR
 			elif columns[1] == "DNA/PIF-Harbinger" and columns[2] == "ClassII DNA hAT nMITE" and columns[3].startswith("TIR/PIF_Harbinger"):
