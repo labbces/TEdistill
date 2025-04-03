@@ -107,7 +107,7 @@ def main():
 					print(f'{columns[0]}\tTIR/MuDR/Mutator *MITE', file=o) #TODO revisar se é correcto, MITe vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183
 				elif 'Harbinger' in columns[2]:
 					print(f'{columns[0]}\tTIR/PIF/Harbinger *MITE', file=o) #TODO revisar se é correcto, MITe vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183							
-			elif columns[1] == 'Unknown' and columns[3] == 'Unknown' and columns[2].startswith("ClassI LTR") and columns[0] not in deeptedomains.key():
+			elif columns[1] == 'Unknown' and columns[3] == 'Unknown' and columns[2].startswith("ClassI LTR") and columns[0] not in deeptedomains.keys():
 					print(f'{columns[0]}\tUnknown', file=o)
 			else:
 				print(line)
