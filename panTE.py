@@ -163,6 +163,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
 #Final file *flTE.fa
 
 def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen, iter, out_path, fileiter, verbose):
+    coverage = 0.95
     sequence_id2=''
     if "#" in sequence_id:
         sequence_id2 = sequence_id.split("#")[0]
@@ -172,7 +173,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
     with open(temp_fasta, "w") as temp_file:
         SeqIO.write(fasta_dict[sequence_id], temp_file, "fasta")
     #Run BLAST for each sequence
-    output_blast_file = os.path.join(out_path, f"{sequence_id2}_blast_result_{iter}.txt")
+    output_blast_file = os.path.join(blast_output_dir, f"{sequence_id2}_blast_result_{iter}.txt")
 
     blast_command = [
         'blastn',  #Or 'blastp' depending on your type of sequences
@@ -230,7 +231,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
                 hsps[sseqid]=[]
             hsps[sseqid].append([sstart,send])
     if verbose > 1:
-        print(f'there are {len(hsps.keys()) subject sequence in dict hsps\n'}
+        print(f'there are {len(hsps.keys())} subject sequence in dict hsps\n')
     for subject in hsps.keys():
         for hsp in hsps[subject]:
             ssstart, ssend = hsp
@@ -243,13 +244,18 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
             subjectseq_str=''.join(subjectseq)
             #Remove R letters from the sequence
         length_hsp_merged=subjectseq_str.count('R')
-        subjectseq_str=subjectseq_str.replace('R','')
-        if (len(subjectseq_str) >= minlen and len(subjectseq_str) < len(fasta_dict[subject].seq)):
-            keep_TEs[subject]=subjectseq_str
-            touched_TEs[subject]=1
-        if (len(subjectseq_str) < minlen):
-            #If sequence is too short put in touched_TEs to skip it if appears again in BLASST results within the same iteration
-            touched_TEs[subject]=1 
+        qcov = length_hsp_merged/qlen
+        scov = length_hsp_merged/slen
+        if qcov >= coverage and scov >= coverage:
+            subjectseq_str=subjectseq_str.replace('R','')
+            if (len(subjectseq_str) >= minlen and len(subjectseq_str) < len(fasta_dict[subject].seq)):
+                keep_TEs[subject]=subjectseq_str
+                touched_TEs[subject]=1
+            if (len(subjectseq_str) < minlen):
+                #If sequence is too short put in touched_TEs to skip it if appears again in BLASST results within the same iteration
+                touched_TEs[subject]=1
+        else:
+            keep_TEs[subject]=fasta_dict[subject].seq
 
 
 def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,minlen,nproc=1, verbose=1):
