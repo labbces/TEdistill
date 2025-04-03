@@ -37,6 +37,7 @@ def parse_arguments():
     parser.add_argument('--minlen', default=80, type=int, help='Minimum length of the cleaned sequence to retain. Default is 80 (bp).')
     parser.add_argument('--minident', default=80, type=int, help='Minimum identity of the cleaned sequence to retain. Default is 80 (%%).')
     parser.add_argument('--nproc', default=1, type=int, help='Number of processors/threads to use.')
+    parser.add_argument('--verbose', '-V', type=int, default=1, help='Set verbosity level (0 = silent, 1 = normal, 2 = debug). Default is 1.')
 
     return parser.parse_args()
 
@@ -161,7 +162,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
         
 #Final file *flTE.fa
 
-def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen, iter, out_path, fileiter):
+def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen, iter, out_path, fileiter, verbose):
     sequence_id2=''
     if "#" in sequence_id:
         sequence_id2 = sequence_id.split("#")[0]
@@ -228,6 +229,8 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
             if sseqid not in hsps.keys():
                 hsps[sseqid]=[]
             hsps[sseqid].append([sstart,send])
+    if verbose > 1:
+        print(f'there are {len(hsps.keys()) subject sequence in dict hsps\n'}
     for subject in hsps.keys():
         for hsp in hsps[subject]:
             ssstart, ssend = hsp
@@ -249,7 +252,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
             touched_TEs[subject]=1 
 
 
-def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,minlen,nproc=1):
+def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,minlen,nproc=1, verbose=1):
     keep_TEs={}
     touched_TEs={}
 
@@ -295,7 +298,7 @@ def remove_nested_sequences(in_path,out_path,iteration,minhsplen,minhspident,min
         #     results = list(executor.map(blast_wrapper, fasta_dict.keys()))
 
         for sequence_id in fasta_dict.keys():
-           blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen, iter, out_path, fileiter)
+           blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen, iter, out_path, fileiter, verbose=verbose)
 
         #Write the sequences that passed the filter
         outPan=f'{out_path}/panTE.flTE.iter{iter+1}.fa'
@@ -352,7 +355,7 @@ def main():
         print("Arquivos correspondentes encontrados.")
         get_flTE(args.in_path,args.out_path,genomeFilePrefixes,args.strict,args.div,args.ins,args.dele,args.cov,args.fl_copy,args.iter,args.minhsplen, args.minhspident,args.minlen)
         join_and_rename(args.in_path,args.out_path,genomeFilePrefixes)
-        remove_nested_sequences(args.in_path,args.out_path,args.iter,args.minhsplen,args.minhspident,args.minlen,args.nproc)
+        remove_nested_sequences(args.in_path,args.out_path,args.iter,args.minhsplen,args.minhspident,args.minlen,args.nproc,args.verbose)
     else:
         print("Some files are missing. Check your input.")
     
