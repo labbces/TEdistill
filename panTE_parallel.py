@@ -1,18 +1,17 @@
 import argparse
 import os
 import re
-import sys
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import shutil
 import subprocess
-import concurrent.futures
-import threading
+from multiprocessing import Manager, Pool
 
 #TODO removing IDX files and pre-pan file before running the script
 #Define global vars
 suffixes = ['EarlGrey.families.strained', 'EarlGrey.RM.out', 'fna']
+
 
 #Example run
 #python3 panTE.py -p /home/eduardo/Documentos/panTE/ -l genome.list -c 3 -d 20 -i 10 -e 10 -v 0.8
@@ -39,10 +38,57 @@ def parse_arguments():
     parser.add_argument('--minlen', default=80, type=int, help='Minimum length of the cleaned sequence to retain. Default is 80 (bp).')
     parser.add_argument('--minident', default=80, type=int, help='Minimum identity of the cleaned sequence to retain. Default is 80 (%%).')
     parser.add_argument('--nproc', default=1, type=int, help='Number of processors/threads to use.')
-    parser.add_argument('--verbose', '-V', type=int, default=1,
-                    help='Set verbosity level (0 = silent, 1 = normal, 2 = debug). Default is 1.')
+    parser.add_argument('--verbose', '-V', type=int, default=1, help='Set verbosity level (0 = silent, 1 = normal, 2 = debug). Default is 1.')
+    parser.add_argument('--offset', default=7, type=int, help='Max distance (bp) to merge adjacent HSPs. Default is 7.')
+    parser.add_argument('--stat_file', default=None, type=str, help='Optional: path to save detailed stat log.')
 
     return parser.parse_args()
+
+def blast_wrapper(args):
+    (sequence_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
+     minhsplen, minhspident, minlen, iteration, out_path, coverage, offset, stat_list, verbose) = args
+
+    local_fasta_dict = SeqIO.to_dict(SeqIO.parse(fileiter, "fasta"))
+
+    return blast_seq(
+        sequence_id,
+        local_fasta_dict,
+        blast_output_dir,
+        keep_TEs,
+        touched_TEs,
+        minhsplen,
+        minhspident,
+        minlen,
+        iteration,
+        out_path,
+        fileiter,
+        coverage=coverage,
+        offset=offset,
+        stat_list=stat_list,
+        verbose=verbose
+    )
+
+
+def merge_hsps(hsps, offset=7):
+    """Merge overlapping or close HSPs (<=offset bp)"""
+    hsps.sort()
+    merged = []
+    if not hsps:
+        return merged, 0
+
+    current = hsps[0]
+    merged_count = 0
+
+    for hsp in hsps[1:]:
+        if hsp[0] > current[1] + offset:
+            merged.append(current)
+            current = hsp
+        else:
+            if hsp[1] > current[1]:
+                current[1] = hsp[1]
+                merged_count += 1
+    merged.append(current)
+    return merged, merged_count
 
 
 def read_identifiers(file):
@@ -165,181 +211,164 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
         
 #Final file *flTE.fa
 
-def blast_seq(sequence_id, sequence, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen, iter, out_path, fileiter, verbose=1):
-    sequence_id2=''
-
-    #Check if the sequence ID contains a "#"
+def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen,
+              iteration, out_path, fileiter, coverage=0.95, offset=7, stat_list=None, verbose=1):
     if "#" in sequence_id:
         sequence_id2 = sequence_id.split("#")[0]
-    
-    #Write the sequence to a temporary file for BLAST input
-    temp_fasta = os.path.join(blast_output_dir, f"temp_{sequence_id2}_{iter}.fasta")
+    else:
+        sequence_id2 = sequence_id
+
+    temp_fasta = os.path.join(blast_output_dir, f"temp_{sequence_id2}_{iteration}.fasta")
     with open(temp_fasta, "w") as temp_file:
-        SeqIO.write(sequence, temp_file, "fasta")
-    #Run BLAST for each sequence
-    output_blast_file = os.path.join(blast_output_dir, f"{sequence_id2}_blast_result_{iter}.txt")
+        SeqIO.write(fasta_dict[sequence_id], temp_file, "fasta")
+
+    output_blast_file = os.path.join(blast_output_dir, f"{sequence_id2}_blast_result_{iteration}.txt")
 
     blast_command = [
-        'blastn',  #Or 'blastp' depending on your type of sequences
+        'blastn',
         '-query', temp_fasta,
-        '-db', fileiter, #Specify your BLAST database
+        '-db', fileiter,
         '-out', output_blast_file,
-        '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send qlen slen',  #Output format (tabular)
-        '-evalue', '1e-5',  #Adjust E-value threshold as needed
+        '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send qlen slen',
+        '-evalue', '1e-5',
         '-word_size', '7',
-        '-dust',  'no'
+        '-dust', 'no'
     ]
-    #Run the BLAST command
+
+    if verbose > 3:
+        print(f"🔍 Running BLAST for {sequence_id} (iteration {iteration})")
+
     try:
-        subprocess.run(blast_command, check=True)
-        if verbose > 1:
-            print(f"BLAST completed for sequence {sequence_id} in iteration {iter}. Results saved to {output_blast_file}")
+        subprocess.run(blast_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as e:
         print(f"Error running BLAST for sequence {sequence_id}: {e}")
+        os.remove(temp_fasta)
+        return
 
-    #Remove the temporary fasta file
     os.remove(temp_fasta)
 
-    #Process the BLAST output
+    hsps = {}
+    iden_stats = {}
+
     with open(output_blast_file, "r") as blast_output:
-        hsps={}
         for line in blast_output:
-            #Split the line by tab
-            columns = line.strip().split("\t")
-            qseqid=columns[0] 
-            sseqid=columns[1]
-            pident=float(columns[2])
-            length=int(columns[3])
-            mismatch=int(columns[4])
-            gapopen=int(columns[5])
-            qstart=int(columns[6])
-            qend=int(columns[7])
-            sstart=int(columns[8])
-            send=int(columns[9])
-            qlen=int(columns[10])
-            slen=int(columns[11])
-            
-            if sseqid in touched_TEs.keys():
+            cols = line.strip().split("\t")
+            if len(cols) < 12:
                 continue
-            if (qseqid == sseqid):
+            qseqid, sseqid = cols[0], cols[1]
+            pident, length = float(cols[2]), int(cols[3])
+            sstart, send = int(cols[8]), int(cols[9])
+            qlen, slen = int(cols[10]), int(cols[11])
+
+            if sseqid in touched_TEs or qseqid == sseqid or length < minhsplen or pident < minhspident:
                 continue
-            if length <= minhsplen:
-                keep_TEs[qseqid]=sequence.seq
-                if verbose > 1:
-                    print(blast_output.read())
-                continue
-            if pident <= minhspident:
-                keep_TEs[qseqid]=sequence.seq
-                continue
+
             if sstart > send:
                 sstart, send = send, sstart
-            if sseqid not in hsps.keys():
-                hsps[sseqid]=[]
-            hsps[sseqid].append([sstart,send])
+
+            hsps.setdefault(sseqid, []).append([sstart, send])
+            iden_stats.setdefault(sseqid, []).append((length, pident))
+
+    changed = False
     for subject in hsps.keys():
-        for hsp in hsps[subject]:
-            ssstart, ssend = hsp
-            # if subject not in fasta_dict.keys():
-            #     print(f'{subject} missing from file {fileiter}')
-            #     continue
-            subjectseq=list(sequence.seq)
-            subjectseq[sstart:send] = ['R'] * ((send - sstart) + 1)
-            #print(subjectseq)
-            subjectseq_str=''.join(subjectseq)
-            #Remove R letters from the sequence
-        subjectseq_str=subjectseq_str.replace('R','')
-        if (len(subjectseq_str) >= minlen and len(subjectseq_str) < len(sequence.seq)):
-            keep_TEs[subject]=subjectseq_str
-            touched_TEs[subject]=1
-        if (len(subjectseq_str) < minlen):
-            #If sequence is too short put in touched_TEs to skip it if appears again in BLASST results within the same iteration
-            touched_TEs[subject]=1 
+        merged_hsps, merged_count = merge_hsps(hsps[subject], offset=offset)
+        length_hsp_merged = sum(end - start + 1 for start, end in merged_hsps)
+
+        qlen = len(fasta_dict[sequence_id].seq)
+        slen = len(fasta_dict[subject].seq)
+        qcov = length_hsp_merged / qlen
+        scov = length_hsp_merged / slen
+
+        # Calculate subject-specific scaled identity
+        aln_iden = iden_stats.get(subject, [])
+        total_len = sum(l for l, _ in aln_iden)
+        scaled_iden = sum(l * i for l, i in aln_iden) / total_len if total_len > 0 else 0
+
+        if verbose > 3:
+            print(f"🧬 Subject: {subject}, {len(hsps[subject])} HSPs → {len(merged_hsps)} merged (offset={offset})")
+            print(f"    qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}")
+
+        if qcov >= coverage or scov >= coverage:
+            subjectseq = list(str(fasta_dict[subject].seq))
+            for start, end in merged_hsps:
+                subjectseq[start:end+1] = ['R'] * ((end - start) + 1)
+            subjectseq_str = ''.join(subjectseq).replace('R', '')
+
+            if len(subjectseq_str) >= minlen and len(subjectseq_str) < slen:
+                keep_TEs[subject] = subjectseq_str
+                touched_TEs[subject] = 1
+                changed = True
+                if stat_list is not None:
+                    stat_list.append(f"{subject}\tIter{iteration}\tCleaned\tqcov={qcov:.3f}\tscov={scov:.3f}\tidentity={scaled_iden:.3f}\tmerged={merged_count}")
+            elif len(subjectseq_str) < minlen:
+                touched_TEs[subject] = 1
+                changed = True
+                if stat_list is not None:
+                    stat_list.append(f"{subject}\tIter{iteration}\tDiscarded (too short after cleaning)")
+        else:
+            keep_TEs[subject] = str(fasta_dict[subject].seq)
+
+    os.remove(output_blast_file)
+    return changed
 
 
-def remove_nested_sequences(in_path, out_path, iteration, minhsplen, minhspident, minlen, nproc=1, verbose=1):
-    from collections import defaultdict
 
-    # Create folder for BLAST files
+def remove_nested_sequences(in_path, out_path, iteration, minhsplen, minhspident, minlen, nproc=1, offset=7, coverage=0.95, verbose=1, stat_file=None):
     blast_output_dir = os.path.join(out_path, "blast_results")
     os.makedirs(blast_output_dir, exist_ok=True)
 
-    #Remove nested sequences from the flTE.fa file
     flTE = f'{out_path}/pre_panTE.flTE.fa'
-    if verbose > 0:
-        print(f'REMOVING NESTED SEQUENCES {flTE}\t{iteration}')
     shutil.copy(flTE, f'{out_path}/panTE.flTE.iter0.fa')
 
-    for iter in range(int(iteration)):
+    manager = Manager()
+    keep_TEs = manager.dict()
+    touched_TEs = manager.dict()
+    stat_list = manager.list() if stat_file else None
+
+    prev_count = -1
+
+    for iter in range(0, iteration if iteration > 0 else 100):
         fileiter = f'{out_path}/panTE.flTE.iter{iter}.fa'
-        fileiteridx = f'{out_path}/panTE.flTE.iter{iter}.fa.idx'
+        fileiteridx = f'{fileiter}.idx'
 
-        # Index fasta file for easy sequence retrieval
-        fasta_dict = SeqIO.to_dict(SeqIO.parse(fileiter, "fasta"))
+        #fasta_dict = SeqIO.index_db(fileiteridx, fileiter, "fasta")
 
-        # Build BLAST database
-        makeblastdb = [
-            'makeblastdb',
-            '-in', fileiter,
-            '-dbtype', 'nucl'
+        subprocess.run(['makeblastdb', '-in', fileiter, '-dbtype', 'nucl'], check=True)
+
+        changed_flags = manager.list()
+
+        with open(fileiter, "r") as f:
+            sequence_ids = [record.id for record in SeqIO.parse(f, "fasta")]
+        
+        task_args = [
+            (seq_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
+                  minhsplen, minhspident, minlen, iter, out_path, coverage, offset, stat_list, verbose)
+                          for seq_id in sequence_ids
         ]
-        #Execute the makeblastadb command
-        try:
-            subprocess.run(makeblastdb, check=True)
-            if verbose > 0:
-                print(f"makeblastdb ran successfully on file {fileiter} during iteration {iter}")
-        except subprocess.CalledProcessError as e:
-            print(f"Error running makeblastdb: {e}")
-            print(e.stderr.decode())  # Print the standard error (if any)
-            continue
-        
-        # Define lock and shared dictionaries
-        keep_TEs = {}
-        touched_TEs = {}
-        lock = threading.Lock()
-        
-        
-        def blast_wrapper(sequence_id):
-            
-            local_keep = {}
-            local_touched = {}
 
-            try:
-                blast_seq(
-                    sequence_id=sequence_id,
-                    sequence=fasta_dict[sequence_id],
-                    blast_output_dir=blast_output_dir,
-                    keep_TEs=local_keep,
-                    touched_TEs=local_touched,
-                    minhsplen=minhsplen,
-                    minhspident=minhspident,
-                    minlen=minlen,
-                    iter=iter,
-                    out_path=out_path,
-                    fileiter=fileiter,
-                    verbose=verbose
-                )
-            except Exception as e:
-                print(f"Error processing sequence {sequence_id}: {e}")
+        with Pool(processes=nproc) as pool:
+            results = pool.map(blast_wrapper, task_args)
 
-            # Safely update global dicts,to avoid race conditions during the parallel execution of BLAST jobs
-            with lock:
-                keep_TEs.update(local_keep)
-                touched_TEs.update(local_touched)
-
-        # Run in threads
-        num_workers = min(nproc, len(fasta_dict))
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-            if verbose > 0:
-                print(f'running blast in parallel with {len(fasta_dict)} sequences during iteration {iter}')
-            executor.map(blast_wrapper, list(fasta_dict.keys()))
-
-        # Write surviving sequences
         outPan = f'{out_path}/panTE.flTE.iter{iter+1}.fa'
-        print(f'Writing surviving sequences to {outPan} iteration {iter}')
         with open(outPan, "w") as o:
-            for TE_id, sequence in keep_TEs.items():
-                new_record = SeqRecord(sequence if isinstance(sequence, Seq) else Seq(sequence), id=TE_id, description='')
-                SeqIO.write(new_record, o, "fasta")
+            for TE in keep_TEs.keys():
+                newrecord = SeqRecord(Seq(keep_TEs[TE]), id=TE, description='')
+                SeqIO.write(newrecord, o, "fasta")
+
+        if not any(results):
+            print(f"Auto-stopping: Saturated at iteration {iter}.")
+            break
+        else:
+            if verbose > 0:
+                print(f"Iteration {iter} completed with {sum(results)} sequences changed.")
+
+        keep_TEs.clear()
+        touched_TEs.clear()
+
+    if stat_file:
+        with open(stat_file, "w") as f:
+            for line in stat_list:
+                f.write(line + "\n")
 
 def join_and_rename(in_path,out_path,genomeFilePrefixes):
     countTEs=0
@@ -371,24 +400,47 @@ def main():
     blast_path = shutil.which("makeblastdb")
     if not blast_path:
         print(f"makeblastdb is not found in the PATH. Please install BLAST+, before continuing.")
+        return
+    
     #Read file identifiers
     genomeFilePrefixes = read_identifiers(args.prefix_list)
     
     if not genomeFilePrefixes:
-        print("Nenhum identificador encontrado.")
+        print("No genome identifiers found.")
         return
     
     #Finds matching files
     found_files = find_expected_files(args.in_path, suffixes, genomeFilePrefixes)
     
-    if found_files:
-        print("Arquivos correspondentes encontrados.")
-        get_flTE(args.in_path,args.out_path,genomeFilePrefixes,args.strict,args.div,args.ins,args.dele,args.cov,args.fl_copy,args.iter,args.minhsplen, args.minhspident,args.minlen)
-        join_and_rename(args.in_path,args.out_path,genomeFilePrefixes)
-        remove_nested_sequences(args.in_path,args.out_path,args.iter,args.minhsplen,args.minhspident,args.minlen,args.nproc,args.verbose)
-    else:
+    if not found_files:
         print("Some files are missing. Check your input.")
+        return
+
+    print("All required files found. Starting pipeline.")
+
+    get_flTE(
+        args.in_path, args.out_path, genomeFilePrefixes,
+        args.strict, args.div, args.ins, args.dele,
+        args.cov, args.fl_copy, args.iter,
+        args.minhsplen, args.minhspident, args.minlen
+    )
     
+    join_and_rename(args.in_path, args.out_path, genomeFilePrefixes)
+
+    remove_nested_sequences(
+        args.in_path,
+        args.out_path,
+        args.iter,
+        args.minhsplen,
+        args.minhspident,
+        args.minlen,
+        args.nproc,
+        offset=args.offset,
+        coverage=args.cov,
+        verbose=args.verbose,
+        stat_file=args.stat_file
+    )
+
 
 if __name__ == '__main__':
     main()
