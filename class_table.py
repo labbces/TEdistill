@@ -41,15 +41,15 @@ def main():
 			
 			#LTRs
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI LTR Gypsy" and columns[3].startswith("LTR/Gypsy"):
-				print(f'{columns[0]}\t{columns[3]}', file=o)
+				print(f'{columns[0]}\t{columns[3]}\tAll agree', file=o)
 			elif columns[1] == "Unknown" and columns[2] == "ClassI LTR Gypsy" and columns[3].startswith("LTR/Gypsy"):
-				print(f'{columns[0]}\t{columns[3]}', file=o)
+				print(f'{columns[0]}\t{columns[3]}\tDeepTE and TESorter', file=o)
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI LTR" and columns[3].startswith("LTR/Gypsy"):
-				print(f'{columns[0]}\t{columns[3]}', file=o)
+				print(f'{columns[0]}\t{columns[3]}\tAll agree', file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("LTR/Copia"):
-				print(f'{columns[0]}\t{columns[3]}', file=o)
+				print(f'{columns[0]}\t{columns[3]}\tAll agree', file=o)
 			elif columns[1] == "Unknown" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("LTR/Copia"):
-				print(f'{columns[0]}\t{columns[3]}', file=o)
+				print(f'{columns[0]}\t{columns[3]}\tDeepTE and TESorter', file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI LTR" and columns[3].startswith("LTR/Copia"):
 				print(f'{columns[0]}\t{columns[3]}', file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI LTR Gypsy" and columns[3].startswith("LTR/Copia"):
