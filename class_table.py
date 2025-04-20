@@ -12,7 +12,6 @@ def parse_arguments():
 	parser.add_argument('-d', '--deepte_domain', help='Path to input file of DeepTE domain classifications file.', required=True)
 	parser.add_argument('-o', '--output_file', help='Path to output file with the consensus classification.', required=True)
 	parser.add_argument('-l', '--delimiter', default=',', help='Delimiter used in the input file. Default is ",".')
-	parser.add_argument('-h', '--help', action='help', help='Show this help message and exit.')
 
 	return parser.parse_args()
 
@@ -40,17 +39,15 @@ def main():
 			if len(columns) !=4:
 				sys.exit()
 
-'''			
-			TODO: Add a check to see if the TE_ID is in the DeepTE domain classifications dictionary.
+			#TODO: Add a check to see if the TE_ID is in the DeepTE domain classifications dictionary.
 			# Check if the TE_ID is in the DeepTE domain classifications dictionary.
-			if columns[0] in deeptedomains:
-				domain = deeptedomains[columns[0]]
-			else:
-				domain = "Unknown"
-'''
+			#if columns[0] in deeptedomains:
+			#	domain = deeptedomains[columns[0]]
+			#else:
+			#	domain = "Unknown"
 
 			if columns[1].lower() == columns[2].lower() and columns[1].lower() == columns[3].lower():
-				print(f'{columns[0]}\t{columns[1]}', file=o)
+				print(f'{columns[0]}\t{columns[1]}\tAll agree', file=o)
 			
 			#LTRs
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI LTR Gypsy" and columns[3].startswith("LTR/Gypsy"):
@@ -126,4 +123,4 @@ def main():
 				print(line)
 
 if __name__ == '__main__':
-    main()
+	main()
