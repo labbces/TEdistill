@@ -5,11 +5,14 @@ import sys
 
 def parse_arguments():
 
-	parser = argparse.ArgumentParser(description='Compair different TE classification methods and create a consensus.')
+	parser = argparse.ArgumentParser(description='Compare different TE classification methods (Earl Grey, DeepTE and TEsorter) and create a consensus on the classification.')
 
-	parser.add_argument('-i', '--input_file', help='Path to input file.')
-	parser.add_argument('-d', '--deepte_domain', help='Path to input file of DeepTE domain file.')
-	parser.add_argument('-o', '--output_file', help='Path to output file.')
+
+	parser.add_argument('-i', '--input_file', help='Path to input file containing TE classifications.', required=True)
+	parser.add_argument('-d', '--deepte_domain', help='Path to input file of DeepTE domain classifications file.', required=True)
+	parser.add_argument('-o', '--output_file', help='Path to output file with the consensus classification.', required=True)
+	parser.add_argument('-l', '--delimiter', default=',', help='Delimiter used in the input file. Default is ",".')
+	parser.add_argument('-h', '--help', action='help', help='Show this help message and exit.')
 
 	return parser.parse_args()
 
@@ -17,6 +20,7 @@ def main():
 	args = parse_arguments()
 	deeptedomains = {}
 
+	# Read the DeepTE domain classifications into a dictionary (first column as key(TE_ID), second column as value (Domain)).
 	with open(args.deepte_domain, "r") as d:
 		for line in d:
 			line=line.rstrip()
@@ -31,11 +35,20 @@ def main():
 			line=line.rstrip()
 			if line.startswith("TE_ID,EarlGrey,DeepTE,TEsorter"):
 				continue
-			columns=line.split(",")
+			columns=line.split(args.delimiter)
 			
 			if len(columns) !=4:
 				sys.exit()
-			
+
+'''			
+			TODO: Add a check to see if the TE_ID is in the DeepTE domain classifications dictionary.
+			# Check if the TE_ID is in the DeepTE domain classifications dictionary.
+			if columns[0] in deeptedomains:
+				domain = deeptedomains[columns[0]]
+			else:
+				domain = "Unknown"
+'''
+
 			if columns[1].lower() == columns[2].lower() and columns[1].lower() == columns[3].lower():
 				print(f'{columns[0]}\t{columns[1]}', file=o)
 			
