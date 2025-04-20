@@ -8,7 +8,7 @@ def parse_arguments():
 	parser = argparse.ArgumentParser(description='Compare different TE classification methods (Earl Grey, DeepTE and TEsorter) and create a consensus on the classification.')
 
 
-	parser.add_argument('-i', '--input_file', help='Path to input file containing TE classifications.', required=True)
+	parser.add_argument('-i', '--input_file', help='Path to input file containing TE classifications table.', required=True)
 	parser.add_argument('-d', '--deepte_domain', help='Path to input file of DeepTE domain classifications file.', required=True)
 	parser.add_argument('-o', '--output_file', help='Path to output file with the consensus classification.', required=True)
 	parser.add_argument('-l', '--delimiter', default=',', help='Delimiter used in the input file. Default is ",".')
@@ -60,6 +60,8 @@ def main():
 				print(f'{columns[0]}\t{columns[3]}\tAll agree', file=o)
 			elif columns[1] == "Unknown" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("LTR/Copia"):
 				print(f'{columns[0]}\t{columns[3]}\tDeepTE and TESorter', file=o)
+			elif columns[1] == "Unknown" and columns[2] == "ClassI LTR" and columns[3].startswith("LTR/Gypsy"):
+				print(f'{columns[0]}\t{columns[3]}\tDeepTE and TESorter', file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI LTR" and columns[3].startswith("LTR/Copia"):
 				print(f'{columns[0]}\t{columns[3]}\tAll agree', file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI LTR Gypsy" and columns[3].startswith("LTR/Copia"):
@@ -74,7 +76,31 @@ def main():
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("Unknown"):
 				print(f'{columns[0]}\t{columns[1]}/unknown\tEarl Grey and DeepTE',file=o)
-			
+			elif columns[1] == "Unknown" and columns[2] == "ClassI" and columns[3].startswith("LTR/Copia"):
+				print(f'{columns[0]}\t{columns[3]}\tDeepTE and TESorter',file=o)
+			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI LTR Copia" and columns[3].startswith("Unknown"):
+				print(f'{columns[0]}\t{columns[1]}/unknown\tEarl Grey and DeepTE',file=o)
+			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassII DNA hAT nMITE" and columns[3].startswith("LTR/Gypsy"):
+				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+
+			#TODO: Check if this logic is correct, if the domain is not found by DeepTE, it should be unknown. Also check if the access to dictionary information is correct.
+			elif columns[1] == "Unknown" and columns[2] == "ClassI" and columns[3].startswith("Unknown"):
+				if columns[0] in deeptedomains.keys():
+					print(f'{columns[0]}\t{deeptedomains[columns[0]]}\tDomain found by DeepTE',file=o)
+				else:
+					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE',file=o)
+
+			#PLE
+			elif columns[1] == "Unknown" and columns[2] == "ClassI nLTR PLE" and columns[3].startswith("Unknown"):
+				if columns[0] in deeptedomains.keys():
+					print(f'{columns[0]}\t{deeptedomains[columns[0]]}\tDomain found by DeepTE',file=o)
+				else:
+					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE',file=o)
+
+			#LINE
+			elif columns[1] == "LINE/L1" and columns[2] == "ClassI LTR" and columns[3].startswith("LINE/unknown"):
+				print(f'{columns[0]}\t{columns[1]}/unknown\tEarl Grey and TESorter',file=o)
+
 			#TIR
 			elif columns[1] == "DNA/PIF-Harbinger" and columns[2] == "ClassII DNA hAT nMITE" and columns[3].startswith("TIR/PIF_Harbinger"):
 				print(f'{columns[0]}\t{columns[3]}\tAll agree',file=o)
