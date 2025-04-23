@@ -44,7 +44,7 @@ cd "$OUTPUT_DIR" || { echo "Failed to access the $OUTPUT_DIR"; exit 1; }
     
 
 #Run python script
-python3 -u /Storage/data2/andreza.cunha/repositories/panTE/panTE.py --in_path "$INPUT_DIR" \
+python3 -u /Storage/data2/andreza.cunha/repositories/panTE/panTE_parallel.py --in_path "$INPUT_DIR" \
                      --out_path "$OUTPUT_DIR" \
                      -l "$GENOME_LIST" \
                      -c 3 \
