@@ -401,7 +401,7 @@ def main():
     if args.type == 'EarlGrey': 
         fileSuffixes = ['EarlGrey.families.strained', 'EarlGrey.RM.out', 'fna']
     elif args.type == 'EDTA': 
-        fileSuffixes = ['EDTA.families.strained', 'EDTA.RM.out', 'fna']
+        fileSuffixes = ['EDTA.mod.EDTA.TElib.fa', 'EDTA.RM.out', 'fna']
     else:
         print(f'Program type not allowed {args.type}')
         return
