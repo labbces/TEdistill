@@ -365,7 +365,7 @@ def remove_nested_sequences(in_path, out_path, iteration, minhsplen, minhspident
 
         if not any(results):
             print(f"Auto-stopping: Saturated at iteration {iter}.")
-            break
+            return
         else:
             if verbose > 0:
                 print(f"Iteration {iter} completed with {sum(results)} sequences changed.")
