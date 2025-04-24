@@ -287,8 +287,8 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         scaled_iden = sum(l * i for l, i in aln_iden) / total_len if total_len > 0 else 0
 
         if verbose > 3:
-            print(f"🧬 Subject: {subject}, {len(hsps[subject])} HSPs → {len(merged_hsps)} merged (offset={offset})")
-            print(f"    qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}")
+            print(f" Subject: {subject}, {len(hsps[subject])} HSPs → {len(merged_hsps)} merged (offset={offset})")
+            print(f"  qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}")
 
         if qcov >= coverage or scov >= coverage:
             subjectseq = list(str(fasta_dict[subject].seq))
