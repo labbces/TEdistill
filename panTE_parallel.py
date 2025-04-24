@@ -9,9 +9,6 @@ import subprocess
 from multiprocessing import Manager, Pool
 
 #TODO removing IDX files and pre-pan file before running the script
-#Define global vars
-suffixes = ['EarlGrey.families.strained', 'EarlGrey.RM.out', 'fna']
-
 
 #Example run
 #python3 panTE.py -p /home/eduardo/Documentos/panTE/ -l genome.list -c 3 -d 20 -i 10 -e 10 -v 0.8
@@ -41,8 +38,11 @@ def parse_arguments():
     parser.add_argument('--verbose', '-V', type=int, default=1, help='Set verbosity level (0 = silent, 1 = normal, 2 = debug). Default is 1.')
     parser.add_argument('--offset', default=7, type=int, help='Max distance (bp) to merge adjacent HSPs. Default is 7.')
     parser.add_argument('--stat_file', default=None, type=str, help='Optional: path to save detailed stat log.')
+    parser.add_argument('--type', default='EarlGrey', type=str, help='Optional: TE detection software, could be EarlGrey or EDTA.')
 
     return parser.parse_args()
+
+
 
 def blast_wrapper(args):
     (sequence_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
@@ -395,7 +395,14 @@ def join_and_rename(in_path,out_path,genomeFilePrefixes):
 def main():
     #Processes arguments
     args = parse_arguments()
-    
+    fileSuffixes=[]
+    if args.type == 'EarlGrey': 
+        fileSuffixes = ['EarlGrey.families.strained', 'EarlGrey.RM.out', 'fna']
+    elif args.type == 'EDTA': 
+        fileSuffixes = ['EDTA.families.strained', 'EDTA.RM.out', 'fna']
+    else:
+        break
+        
     #Verify if BLAST+ is installed
     blast_path = shutil.which("makeblastdb")
     if not blast_path:
@@ -410,7 +417,7 @@ def main():
         return
     
     #Finds matching files
-    found_files = find_expected_files(args.in_path, suffixes, genomeFilePrefixes)
+    found_files = find_expected_files(args.in_path, fileSuffixes, genomeFilePrefixes)
     
     if not found_files:
         print("Some files are missing. Check your input.")
