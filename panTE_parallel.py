@@ -120,8 +120,8 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
         count_TE_identifiers={}
         out_flTE=f'{out_path}/{genomeFilePrefix}.flTE.list'
         outfa_flTE=f'{out_path}/{genomeFilePrefix}.flTE.fa'
-        filePath = f'{in_path}/{genomeFilePrefix}.EarlGrey.RM.out'
-        teSequenceFile = f'{in_path}/{genomeFilePrefix}.EarlGrey.families.strained'
+        filePath = f'{in_path}/{genomeFilePrefix}.{programtype}.RM.out'
+        teSequenceFile = f'{in_path}/{genomeFilePrefix}.{programtype}.TEfamilies.fa'
         print(filePath)
         with open(filePath, 'r') as f:
             #Loop over the input lines.
@@ -399,9 +399,9 @@ def main():
     args = parse_arguments()
     fileSuffixes=[]
     if args.type == 'EarlGrey': 
-        fileSuffixes = ['EarlGrey.families.strained', 'EarlGrey.RM.out', 'fna']
+        fileSuffixes = ['EarlGrey.TEfamilies.fa', 'EarlGrey.RM.out', 'fna']
     elif args.type == 'EDTA': 
-        fileSuffixes = ['EDTA.mod.EDTA.TElib.fa', 'EDTA.RM.out', 'fna']
+        fileSuffixes = ['EDTA.TEfamilies.fa', 'EDTA.RM.out', 'fna']
     else:
         print(f'Program type not allowed {args.type}')
         return
