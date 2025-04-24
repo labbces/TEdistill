@@ -38,7 +38,7 @@ def parse_arguments():
     parser.add_argument('--verbose', '-V', type=int, default=1, help='Set verbosity level (0 = silent, 1 = normal, 2 = debug). Default is 1.')
     parser.add_argument('--offset', default=7, type=int, help='Max distance (bp) to merge adjacent HSPs. Default is 7.')
     parser.add_argument('--stat_file', default=None, type=str, help='Optional: path to save detailed stat log.')
-    parser.add_argument('--type', default='EarlGrey', type=str, help='Optional: TE detection software, could be EarlGrey or EDTA.')
+    parser.add_argument('--type', default='EarlGrey', type=str, help='Optional: TE detection software, could be EarlGrey or EDTA, default is EarlGrey.')
 
     return parser.parse_args()
 
