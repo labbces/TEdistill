@@ -172,10 +172,14 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                     #If stringent, only allow if divergence, insertion, and deletion are all zero.
                     if div == 0 and ins == 0 and del_ == 0:
                         if TEs == 1 and TEleft == 0:
-                            if TEidClassFam in count_TE_identifiers.keys():
-                                count_TE_identifiers[TEidClassFam]+=1
-                            else:
-                                count_TE_identifiers[TEidClassFam]=1
+                            full_len, length = 0, 0
+                            full_len = TEe + TEleft
+                            length = TEe - TEs + 1
+                            if length / (full_len + 1) >= min_cov:
+                                if TEidClassFam in count_TE_identifiers.keys():
+                                    count_TE_identifiers[TEidClassFam]+=1
+                                else:
+                                    count_TE_identifiers[TEidClassFam]=1
                             #print(line, end='',file=o)  # Print the line if the condition is met.
                 else:
                     #If not stringent, apply the divergence, insertion, and deletion limits.
