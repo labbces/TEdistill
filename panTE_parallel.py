@@ -165,6 +165,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
 
                 TEidClassFam= f'{id_.lower()}#{type_}'
 
+                print(f'DIEGO {line}')
                 #Apply stringent conditions if stringent == 1.
                 if strict == 1:
                     #If stringent, only allow if divergence, insertion, and deletion are all zero.
