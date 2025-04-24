@@ -113,7 +113,7 @@ def find_expected_files(in_path, suffixes,identifiers):
     if countOK == len(identifiers)*len(suffixes):
         return True #All files found
 
-def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_copy,iteration,minhsplen,minhspident,minlen):
+def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_copy,iteration,minhsplen,minhspident,minlen,programtype):
     #Read the RM file and select the TEs that are full length
     #Refactored from find_flTE.pl in EDTA package
     for genomeFilePrefix in genomeFilePrefixes:
@@ -137,13 +137,15 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                 columns = line.split()
                 if len(columns) < 14:
                     continue
+                if programtype == 'EarlGrey':
+                    if columns[0] == 'SW':
+                        continue
+                    if columns[0] == 'score':
+                        continue
+                elif programtype == 'EDTA':
+                    if columns[0] == 'SW_score':
+                        continue
 
-                if columns[0] == 'SW':
-                    continue
-                if columns[0] == 'score':
-                    continue
-                
-                #TODO:Check the case for the complement strand
                 if columns[8] == '+':
                     SW, div, del_, ins = int(columns[0]), float(columns[1]), float(columns[2]), float(columns[3])
                     chr_, start, end, strand = columns[4], int(columns[5]), int(columns[6]), columns[8]
@@ -401,7 +403,8 @@ def main():
     elif args.type == 'EDTA': 
         fileSuffixes = ['EDTA.families.strained', 'EDTA.RM.out', 'fna']
     else:
-        break
+        print(f'Program type not allowed {args.type}')
+        return
         
     #Verify if BLAST+ is installed
     blast_path = shutil.which("makeblastdb")
@@ -429,7 +432,8 @@ def main():
         args.in_path, args.out_path, genomeFilePrefixes,
         args.strict, args.div, args.ins, args.dele,
         args.cov, args.fl_copy, args.iter,
-        args.minhsplen, args.minhspident, args.minlen
+        args.minhsplen, args.minhspident, args.minlen,
+        args.type
     )
     
     join_and_rename(args.in_path, args.out_path, genomeFilePrefixes)
