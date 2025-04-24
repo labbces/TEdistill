@@ -147,10 +147,6 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                     if columns[0] == 'SW_score':
                         continue
                 
-                #Skip if type is "Simple_repeat" or "Low_complexity" or "Satellite".
-                if type_ == "Simple_repeat" or type_ == "Low_complexity" or type_ == "Satellite":
-                    continue
-
                 if columns[8] == '+':
                     SW, div, del_, ins = int(columns[0]), float(columns[1]), float(columns[2]), float(columns[3])
                     chr_, start, end, strand = columns[4], int(columns[5]), int(columns[6]), columns[8]
@@ -159,7 +155,11 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                     SW, div, del_, ins = int(columns[0]), float(columns[1]), float(columns[2]), float(columns[3])
                     chr_, start, end, strand = columns[4], int(columns[5]), int(columns[6]), columns[8]
                     id_, type_, TEleft, TEe, TEs = columns[9], columns[10], int(columns[11]), int(columns[12]), int(columns[13])
-                    
+
+                #Skip if type is "Simple_repeat" or "Low_complexity" or "Satellite".
+                if type_ == "Simple_repeat" or type_ == "Low_complexity" or type_ == "Satellite":
+                    continue
+
                 #Skip unless SW is a number.
                 if not re.match(r'[0-9]+', str(SW)):
                     continue
