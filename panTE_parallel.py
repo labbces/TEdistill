@@ -196,6 +196,19 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                                 count_TE_identifiers[TEidClassFam]=1
                             #print(line, end='',file=o)  # Print the line if the condition is met.
         print(f"Writing full length TEs that appear more than {fl_copy} times in the genome. Outfiles: {out_flTE} and {outfa_flTE}")
+        #Verify that the .flTE.list and .flTE.fa files are not empty.
+        if os.path.getsize(out_flTE) == 0 :
+            print(f"Error: {out_flTE} is empty. Check your filters or your input file.")
+            exit(1)
+        
+        if os.path.getsize(outfa_flTE == 0):
+            print(f"Error: {outfa_flTE} is empty. Check your filters or your input file.")
+            exit(1)
+        
+        else:
+            continue
+
+
         #Indexing TE families fasta
         TE_fasta = SeqIO.index(teSequenceFile, "fasta")
         #print(list(TE_fasta.keys()))
@@ -216,6 +229,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                         print(f'{TE}\t{newID}\t{count_TE_identifiers[TE]}',file=o)
                     else:
                         print(f"TE {TE} not found in the TE fasta file")
+            print(f"Selected {countTEs} full-length TEs.")
         
 #Final file *flTE.fa
 
@@ -227,6 +241,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         sequence_id2 = sequence_id
 
     temp_fasta = os.path.join(blast_output_dir, f"temp_{sequence_id2}_{iteration}.fasta")
+
     with open(temp_fasta, "w") as temp_file:
         SeqIO.write(fasta_dict[sequence_id], temp_file, "fasta")
 
