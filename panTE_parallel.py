@@ -101,19 +101,58 @@ def read_identifiers(file):
         print(f'File {file} not found.')
         return []
 
-def find_expected_files(in_path, suffixes,identifiers):
+def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
+    """
+    Renomeia o arquivo FASTA original para .orig e cria um novo com:
+    - Parte à esquerda do '#' (família) em uppercase
+    - Parte à direita do '#' (classe) preservada como está
+    - description = ID final (sem espaço ou anotações extras)
+    
+    Args:
+        fasta_path (str): Caminho para o arquivo FASTA a ser processado.
+        verbose (int): Nível de verbosidade.
+    """
+    if not os.path.isfile(fasta_path):
+        if verbose:
+            print(f"Arquivo não encontrado: {fasta_path}")
+        return
+    
+    orig_path = f"{fasta_path}.orig"
+    os.rename(fasta_path, orig_path)
+    
+    with open(fasta_path, 'w') as out_handle:
+        for record in SeqIO.parse(orig_path, "fasta"):
+            # separa em família e classe, se houver '#'
+            if '#' in record.id:
+                family, teclass = record.id.split('#', 1)
+                new_id = f"{family.upper()}#{teclass}"
+            else:
+                new_id = record.id.upper()  # fallback
+            
+            record.id = new_id
+            record.name = new_id
+            record.description = new_id  # limpa qualquer descrição adicional
+            
+            SeqIO.write(record, out_handle, "fasta")
+    
+    if verbose > 0:
+        print(f"[INFO] IDs convertidos parcialmente em: {fasta_path} (original salvo como {orig_path})")
+
+def find_expected_files(in_path, suffixes,identifiers, verbose):
     countOK=0
     for identifier in identifiers:
         for suffix in suffixes:
             filePath = f'{in_path}/{identifier}.{suffix}'
             if os.path.exists(filePath):
+                if suffix.endswith('.TEfamilies.fa'):
+                    rename_and_uppercase_fasta_ids(filePath,verbose)
                 countOK+=1
             else:
                 print(f"File not found: {filePath}")
     if countOK == len(identifiers)*len(suffixes):
         return True #All files found
 
-def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_copy,iteration,minhsplen,minhspident,minlen,programtype):
+def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,min_cov,fl_copy,iteration,minhsplen,minhspident,minlen,programtype,verbose=1):
     #Read the RM file and select the TEs that are full length
     for genomeFilePrefix in genomeFilePrefixes:
         count_TE_identifiers={}
@@ -174,7 +213,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                             full_len = TEe + TEleft
                             length = TEe - TEs + 1
                             if length / (full_len + 1) >= min_cov:
-                                print(f'DIEGO STRICT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs}')
+                                # print(f'DIEGO STRICT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs}')
                                 if TEidClassFam in count_TE_identifiers.keys():
                                     count_TE_identifiers[TEidClassFam]+=1
                                 else:
@@ -183,6 +222,12 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                 else:
                     #If not stringent, apply the divergence, insertion, and deletion limits.
                     if div <= max_div and ins <= max_ins and del_ <= max_del:
+                        if TEe < 0 or TEs < 0 or TEleft < 0:
+                            if verbose > 10:
+                                print(f"[WARNING] Invalid consensus coordinates: TEs={TEs}, TEe={TEe}, TEleft={TEleft} for TE {id_} in {genomeFilePrefix}. Skipping.")
+                            continue
+                        # print(f'DIEGO LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs}')
+                        # print(line)
                         full_len, length = 0, 0
                         #Calculate full length and actual length for strand "+".
                         full_len = TEe + TEleft
@@ -197,13 +242,16 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
         print(f"Writing full length TEs that appear more than {fl_copy} times in the genome. Outfiles: {out_flTE} and {outfa_flTE}")
 
         #Indexing TE families fasta
+        #
         TE_fasta = SeqIO.index(teSequenceFile, "fasta")
+
         #print(list(TE_fasta.keys()))
+        #print(list(TE_fastteSequenceFile))
         countTEs=0
         with open(out_flTE, 'w') as o, open(outfa_flTE, "w") as ofa:
             print(f'TE_OriID\tTE_NewID\tNumberCopiesInGenome',file=o)
             for TE in count_TE_identifiers.keys():
-                if count_TE_identifiers[TE] > fl_copy:
+                if count_TE_identifiers[TE] >= fl_copy:
                     if TE in TE_fasta.keys():
                         countTEs+=1
                         #Create a new identifier that has the countTEs var and pad with 6 zeroes
@@ -215,8 +263,8 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                         SeqIO.write(TE_fasta[TE], ofa, "fasta")
                         print(f'{TE}\t{newID}\t{count_TE_identifiers[TE]}',file=o)
                     else:
-                        print(f"TE {TE} not found in the TE fasta file")
-            print(f"Selected {countTEs} full-length TEs.")
+                        print(f"TE {TE} not found in the TE fasta file {teSequenceFile}")
+            print(f"Selected {countTEs} full-length TEs for {genomeFilePrefix}.")
 
         #Verify that the .flTE.list and .flTE.fa files are not empty.
         if os.path.getsize(out_flTE) == 0 :
@@ -231,6 +279,9 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
 
 def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen,
               iteration, out_path, fileiter, coverage=0.95, offset=7, stat_list=None, verbose=1):
+    if verbose > 3:
+        print(f'{sequence_id}')
+
     if "#" in sequence_id:
         sequence_id2 = sequence_id.split("#")[0]
     else:
@@ -437,7 +488,7 @@ def main():
         return
 
     #Finds matching files
-    found_files = find_expected_files(args.in_path, fileSuffixes, genomeFilePrefixes)
+    found_files = find_expected_files(args.in_path, fileSuffixes, genomeFilePrefixes, args.verbose)
 
     if not found_files:
         print("Some files are missing. Check your input.")
@@ -450,7 +501,7 @@ def main():
         args.strict, args.div, args.ins, args.dele,
         args.cov, args.fl_copy, args.iter,
         args.minhsplen, args.minhspident, args.minlen,
-        args.type
+        args.type, args.verbose
     )
 
     join_and_rename(args.in_path, args.out_path, genomeFilePrefixes)
