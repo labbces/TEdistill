@@ -41,10 +41,10 @@ def main():
 
 			#TODO: Add a check to see if the TE_ID is in the DeepTE domain classifications dictionary.
 			# Check if the TE_ID is in the DeepTE domain classifications dictionary.
-			#if columns[0] in deeptedomains:
-			#	domain = deeptedomains[columns[0]]
-			#else:
-			#	domain = "Unknown"
+			if columns[0] in deeptedomains:
+				domain = deeptedomains[columns[0]]
+			else:
+				domain = "Unknown"
 
 			if columns[1].lower() == columns[2].lower() and columns[1].lower() == columns[3].lower():
 				print(f'{columns[0]}\t{columns[1]}\tAll agree', file=o)
@@ -82,16 +82,18 @@ def main():
 				print(f'{columns[0]}\t{columns[1]}/unknown\tEarl Grey and DeepTE',file=o)
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassII DNA hAT nMITE" and columns[3].startswith("LTR/Gypsy"):
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassII DNA Mutator nMIT" and columns[3].startswith("LTR/Gypsy"):
+				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
 
 			#TODO: Check if this logic is correct, if the domain is not found by DeepTE, it should be unknown. Also check if the access to dictionary information is correct.
-			elif columns[1] == "Unknown" and columns[2] == "ClassI" and columns[3].startswith("Unknown"):
+			elif columns[1] == "Unknown" and columns[2] == "ClassI" and columns[3] == "Unknown":
 				if columns[0] in deeptedomains.keys():
 					print(f'{columns[0]}\t{deeptedomains[columns[0]]}\tDomain found by DeepTE',file=o)
 				else:
 					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE',file=o)
 
 			#PLE
-			elif columns[1] == "Unknown" and columns[2] == "ClassI nLTR PLE" and columns[3].startswith("Unknown"):
+			elif columns[1] == "Unknown" and columns[2] == "ClassI nLTR PLE" and columns[3] == "Unknown":
 				if columns[0] in deeptedomains.keys():
 					print(f'{columns[0]}\t{deeptedomains[columns[0]]}\tDomain found by DeepTE',file=o)
 				else:
@@ -105,7 +107,11 @@ def main():
 			elif columns[1] == "DNA/PIF-Harbinger" and columns[2] == "ClassII DNA hAT nMITE" and columns[3].startswith("TIR/PIF_Harbinger"):
 				print(f'{columns[0]}\t{columns[3]}\tAll agree',file=o)
 
-			#The CACTA
+			#MITEs
+			elif columns[1] == "Unknown" and columns[2] == "ClassII MITE" and columns[3] == "Unknown":
+				print(f'{columns[0]}\t{columns[2]}\tonly DeepTE',file=o)
+			
+			#CACTA
 			elif columns[1] == "DNA/CMC-EnSpm" and columns[2].startswith("ClassII DNA CACTA") and columns[3].startswith("TIR/EnSpm_CACTA/"):#EnSpm_CACTA is the same as CMC-EnSpm following https://www.jstage.jst.go.jp/article/ggs/94/6/94_18-00024/_html/-char/en
 				print(f'{columns[0]}\t{columns[3]}\tAll agree', file=o)
 			elif columns[1] == "DNA/CMC-EnSpm" and 'CACTA' not in columns[2] and columns[2].startswith("ClassII DNA ") and columns[3].startswith("TIR/EnSpm_CACTA/"):#EnSpm_CACTA is the same as CMC-EnSpm following https://www.jstage.jst.go.jp/article/ggs/94/6/94_18-00024/_html/-char/en
