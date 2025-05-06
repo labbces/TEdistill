@@ -126,12 +126,16 @@ def main():
 				print(f'{columns[0]}\t{columns[1]}/unknown\tEarl Grey and TESorter',file=o)
 			elif columns[1] == "LINE/RTE-BovB" and columns[2].startswith("ClassI ") and columns[3].startswith("LINE"):
 				print(f'{columns[0]}\t{columns[1]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "Unknown" and columns[2].startswith("ClassI ") and columns[3].startswith("LINE/unknown"):
+				if columns[0] in deeptedomains.keys():
+					print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
+				else:
+					print(f'{columns[0]}\t{columns[3]}\tDomain not found by DeepTE, only TESorter',file=o)
 			elif columns[1] == "Unknown" and columns[2].startswith("ClassI nLTR") and columns[3].startswith("Unknown"):
 				if columns[0] in deeptedomains.keys():
 					print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
 				else:
 					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE',file=o)
-
 			elif columns[1].startswith("LINE") and columns[2].startswith("ClassI LTR") and columns[3].startswith("Unknown"): 
 				if columns[0] in deeptedomains.keys():
 					domains = deeptedomains[columns[0]].split(',')
@@ -171,6 +175,13 @@ def main():
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
 			elif columns[1] == "DNA/hAT-Tip100" and columns[2].startswith("ClassI LTR") and columns[3].startswith("TIR/hAT"):
 				print(f'{columns[0]}\t{columns[1]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "Unknown" and columns[2].startswith("ClassII DNA") and columns[3].startswith("Unknown"):
+				if columns[0] in deeptedomains.keys():
+					print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
+				else:
+					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE',file=o)
+			elif columns[1] == "DNA/hAT-Tag1" and columns[2].startswith("ClassII DNA") and columns[3].startswith("TIR/hAT"):
+				print(f'{columns[0]}\t{columns[3]}-Tag1\tEarl Grey and TESorter',file=o)
 			
 			#MITEs
 			elif columns[1] == 'Unknown' and columns[3] == 'Unknown' and (columns[2].startswith("ClassII DNA") and columns[2].endswith("MITE")):
@@ -194,6 +205,12 @@ def main():
 				print(f'{columns[0]}\t{columns[1]}\tOnly Earl Grey', file=o)
 			elif columns[1] == "Satellite" and columns[2].startswith("ClassI ") and columns[3].startswith("Unknown"):
 				print(f'{columns[0]}\t{columns[1]}\tOnly Earl Grey', file=o)
+			elif columns[1] == "Unknown" and columns[2] == "ClassII nMITE" and columns[3].startswith("Unknown"):
+				if columns[0] in deeptedomains.keys():
+					print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
+				else:
+					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE',file=o)
+
 			#elif columns[1] == "DNA/CMC-EnSpm" and columns[2] == "ClassII DNA hAT MITE" and columns[3] == "Unknown":
 				#print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
 			#"To date, no MITE families have been reported to be related to the Maverick/Polinton, Transib, CACTA, or Merlin superfamilies.
@@ -209,6 +226,11 @@ def main():
 				print(f'{columns[0]}\tTIR/EnSpm_CACTA/unknown\tEarl Grey and DeepTE', file=o)
 			elif columns[1] == "DNA/CMC-EnSpm" and columns[2].startswith("ClassI LTR") and columns[3].startswith("TIR/EnSpm_CACTA/"):
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter', file=o)
+			elif columns[1].startswith("DNA/") and columns[2].startswith("ClassI LTR") and columns[3] == "Unknown":
+				if columns[0] in deeptedomains.keys():
+					print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE', file=o)
+				else:
+					print(f'{columns[0]}\t{columns[1]}\tDomain not found by DeepTE, only Earl Grey', file=o)
 			elif columns[1].startswith("DNA/hAT-") and columns[2].startswith("ClassII DNA hAT") and (columns[3].startswith("TIR/hAT/") or columns[3] == "Unknown"):
 				if columns[3] == "Unknown":
 					col3sub = 'unknown'
