@@ -29,7 +29,7 @@ def parse_arguments():
     parser.add_argument('-i', '--ins', default=10, type=float, help='Maximum insertion allowed. Default is 10.')
     parser.add_argument('-e', '--dele', default=10, type=float, help='Maximum deletion allowed. Default is 10.')
     parser.add_argument('-v', '--cov', default=0.8, type=float, help='Minimum coverage allowed. Default is 0.8.')
-    parser.add_argument('--iter', default=1, type=int, help='Number of iterations to detect nested sequences. Default is 1.')
+    parser.add_argument('--iter', default=None, type=int, help='Max number of iterations to remove nested sequences. If not set, run until saturation.')
     parser.add_argument('--minhsplen', default=80, type=int, help='Minimum HSP length. Default is 80 (bp).')
     parser.add_argument('--minhspident', default=80, type=int, help='Minimum HSP identity. Default is 80 (%%).')
     parser.add_argument('--minlen', default=80, type=int, help='Minimum length of the cleaned sequence to retain. Default is 80 (bp).')
@@ -383,7 +383,77 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
 
 
 
-def remove_nested_sequences(in_path, out_path, iteration, minhsplen, minhspident, minlen, nproc=1, offset=7, coverage=0.95, verbose=1, stat_file=None):
+
+def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, nproc=1,
+                            offset=7, coverage=0.95, verbose=1, stat_file=None, max_iter=None):
+    blast_output_dir = os.path.join(out_path, "blast_results")
+    os.makedirs(blast_output_dir, exist_ok=True)
+
+    # Find last iteration file
+    iteration = 0
+    while os.path.exists(f"{out_path}/panTE.flTE.iter{iteration+1}.fa"):
+        iteration += 1
+
+    if iteration == 0:
+        # First run
+        initial_input = f"{out_path}/pre_panTE.flTE.fa"
+        shutil.copy(initial_input, f"{out_path}/panTE.flTE.iter0.fa")
+    else:
+        print(f"[INFO] Resuming from iteration {iteration}")
+
+    manager = Manager()
+    keep_TEs = manager.dict()
+    touched_TEs = manager.dict()
+    stat_list = manager.list() if stat_file else None
+
+    while True:
+        fileiter = f'{out_path}/panTE.flTE.iter{iteration}.fa'
+        subprocess.run(['makeblastdb', '-in', fileiter, '-dbtype', 'nucl'], check=True)
+
+        with open(fileiter, "r") as f:
+            sequence_ids = [record.id for record in SeqIO.parse(f, "fasta")]
+
+        task_args = [
+            (seq_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
+             minhsplen, minhspident, minlen, iteration, out_path,
+             coverage, offset, stat_list, verbose)
+            for seq_id in sequence_ids
+        ]
+
+        with Pool(processes=nproc) as pool:
+            results = pool.map(blast_wrapper, task_args)
+
+        outPan = f'{out_path}/panTE.flTE.iter{iteration+1}.fa'
+        with open(outPan, "w") as o:
+            for TE in keep_TEs:
+                newrecord = SeqRecord(Seq(keep_TEs[TE]), id=TE, description='')
+                SeqIO.write(newrecord, o, "fasta")
+
+        if not any(results):
+            print(f"[INFO] Saturated: no further changes at iteration {iteration}.")
+            break
+
+        if max_iter is not None and iteration + 1 >= max_iter:
+            print(f"[INFO] Max iterations ({max_iter}) reached.")
+            break
+
+        if verbose:
+            print(f"[INFO] Iteration {iteration} complete, {sum(results)} sequences changed.")
+
+        iteration += 1
+        keep_TEs.clear()
+        touched_TEs.clear()
+
+    if stat_file:
+        with open(stat_file, "w") as f:
+            for line in stat_list:
+                f.write(line + "\n")
+
+
+
+#####
+
+def remove_nested_sequences2(in_path, out_path, iteration, minhsplen, minhspident, minlen, nproc=1, offset=7, coverage=0.95, verbose=1, stat_file=None):
     blast_output_dir = os.path.join(out_path, "blast_results")
     os.makedirs(blast_output_dir, exist_ok=True)
 
@@ -507,19 +577,18 @@ def main():
     join_and_rename(args.in_path, args.out_path, genomeFilePrefixes)
 
     remove_nested_sequences(
-        args.in_path,
-        args.out_path,
-        args.iter,
-        args.minhsplen,
-        args.minhspident,
-        args.minlen,
-        args.nproc,
-        offset=args.offset,
-        coverage=args.cov,
-        verbose=args.verbose,
-        stat_file=args.stat_file
+            args.in_path,
+            args.out_path,
+            args.minhsplen,
+            args.minhspident,
+            args.minlen,
+            args.nproc,
+            offset=args.offset,
+            coverage=args.cov,
+            verbose=args.verbose,
+            stat_file=args.stat_file,
+            max_iter=args.iter
     )
-
 
 if __name__ == '__main__':
     main()
