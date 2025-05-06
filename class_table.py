@@ -93,6 +93,14 @@ def main():
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI nLTR LINE L1" and columns[3].startswith("LTR/Copia"):
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI nLTR LINE L1" and columns[3].startswith("LTR/Gypsy"):
+				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI nLTR DIRS" and columns[3].startswith("LTR/Copia"):
+				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "LTR/Copia" and columns[2] == "unknown" and columns[3].startswith("LTR/Copia"):
+				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "Unknown" and columns[2].startswith("ClassII ") and columns[3].startswith("LTR/Copia"):
+				print(f'{columns[0]}\t{columns[3]}\tOnly TESorter',file=o)
 			elif columns[1] == "Unknown" and columns[2].startswith("ClassI LTR") and columns[3] == "Unknown":
 				if columns[0] in deeptedomains.keys():
 					print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
@@ -114,11 +122,15 @@ def main():
 			#LINE
 			elif columns[1] == "LINE/L1" and columns[2].startswith("ClassI ") and columns[3].startswith("LINE/unknown"):
 				print(f'{columns[0]}\t{columns[1]}/unknown\tEarl Grey and TESorter',file=o)
+			
+			#Helintron
+			elif columns[1] == "RC/Helitron" and columns[2].startswith("ClassII DNA") and columns[3].startswith("Helitron"):
+				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
 
 			#TIR
 			elif columns[1] == "DNA/PIF-Harbinger" and columns[2] == "ClassII DNA hAT nMITE" and columns[3].startswith("TIR/PIF_Harbinger"):
-				print(f'{columns[0]}\t{columns[3]}\tAll agree',file=o)
-			elif columns[1] == "DNA/PIF-Harbinger" and columns[2] == "ClassII DNA TcMar MITE" and columns[3].startswith("TIR/PIF_Harbinger"):
+				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "DNA/PIF-Harbinger" and columns[2].startswith("ClassII DNA ") and columns[3].startswith("TIR/PIF_Harbinger"):
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
 			elif columns[1] == "DNA/MULE-MuDR" and columns[2].startswith("ClassII DNA") and columns[3].startswith("TIR/MuDR_Mutator"):
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
@@ -132,6 +144,11 @@ def main():
 			#MITEs
 			elif columns[1] == "Unknown" and columns[2] == "ClassII MITE" and columns[3] == "Unknown":
 				print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
+			#elif columns[1] == "DNA/CMC-EnSpm" and columns[2] == "ClassII DNA hAT MITE" and columns[3] == "Unknown":
+				
+			#"To date, no MITE families have been reported to be related to the Maverick/Polinton, Transib, CACTA, or Merlin superfamilies.
+			#However, some MITE families show certain characteristic features that may identify them in these superfamilies."
+			#https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3290980/
 			
 			#CACTA
 			elif columns[1] == "DNA/CMC-EnSpm" and columns[2].startswith("ClassII DNA CACTA") and columns[3].startswith("TIR/EnSpm_CACTA/"):#EnSpm_CACTA is the same as CMC-EnSpm following https://www.jstage.jst.go.jp/article/ggs/94/6/94_18-00024/_html/-char/en
