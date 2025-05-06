@@ -89,8 +89,10 @@ def main():
 				print(f'{columns[0]}\t{columns[3]}\tDeepTE and TESorter',file=o)
 			elif columns[1] == "Unknown" and columns[2].startswith("ClassI LTR") and columns[3].startswith("LTR/Gypsy"):
 				print(f'{columns[0]}\t{columns[3]}\tDeepTE and TESorter',file=o)
-			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI " and columns[3].startswith("LTR/Gypsy"):
+			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI" and columns[3].startswith("LTR/Gypsy"):
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI" and columns[3].startswith("LTR/Copia"):
+				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter', file=o)
 			elif columns[1] == "LTR/Copia" and columns[2] == "ClassI nLTR LINE L1" and columns[3].startswith("LTR/Copia"):
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
 			elif columns[1] == "LTR/Gypsy" and columns[2] == "ClassI nLTR LINE L1" and columns[3].startswith("LTR/Gypsy"):
@@ -119,13 +121,40 @@ def main():
 				else:
 					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE',file=o)
 
-			#LINE
+			#LINE and SINE
 			elif columns[1] == "LINE/L1" and columns[2].startswith("ClassI ") and columns[3].startswith("LINE/unknown"):
 				print(f'{columns[0]}\t{columns[1]}/unknown\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "LINE/RTE-BovB" and columns[2].startswith("ClassI ") and columns[3].startswith("LINE"):
+				print(f'{columns[0]}\t{columns[1]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "Unknown" and columns[2].startswith("ClassI nLTR") and columns[3].startswith("Unknown"):
+				if columns[0] in deeptedomains.keys():
+					print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
+				else:
+					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE',file=o)
+
+			elif columns[1].startswith("LINE") and columns[2].startswith("ClassI LTR") and columns[3].startswith("Unknown"): 
+				if columns[0] in deeptedomains.keys():
+					domains = deeptedomains[columns[0]].split(',')
+					unique_domains = set(d.strip() for d in domains if d.strip())
+					if len(unique_domains) >= 2:
+						print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE', file=o)
+					else:
+						domain_str = ', '.join(unique_domains) if unique_domains else 'None'
+						print(f'{columns[0]}\tClassI/Unknown\tOnly one domain found by DeepTE ({domain_str})', file=o)
+				else:
+					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE', file=o)
+
 			
-			#Helintron
+			#Helitron
 			elif columns[1] == "RC/Helitron" and columns[2].startswith("ClassII DNA") and columns[3].startswith("Helitron"):
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "Unknown" and columns[2].startswith("ClassIII Helitron") and columns[3].startswith("LTR/Copia"):
+				print(f'{columns[0]}\t{columns[3]}\tOnly TESorter',file=o)
+			elif columns[1] == "Unknown" and columns[2] == "ClassIII Helitron" and columns[3].startswith("Unknown"):
+				if columns[0] in deeptedomains.keys():
+					print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
+				else:
+					print(f'{columns[0]}\tUnknown\tDomain not found by DeepTE',file=o)
 
 			#TIR
 			elif columns[1] == "DNA/PIF-Harbinger" and columns[2] == "ClassII DNA hAT nMITE" and columns[3].startswith("TIR/PIF_Harbinger"):
@@ -140,12 +169,33 @@ def main():
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
 			elif columns[1] == "DNA/hAT-Ac" and columns[2].startswith("ClassI LTR") and columns[3].startswith("TIR/hAT"):
 				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter',file=o)
+			elif columns[1] == "DNA/hAT-Tip100" and columns[2].startswith("ClassI LTR") and columns[3].startswith("TIR/hAT"):
+				print(f'{columns[0]}\t{columns[1]}\tEarl Grey and TESorter',file=o)
 			
 			#MITEs
+			elif columns[1] == 'Unknown' and columns[3] == 'Unknown' and (columns[2].startswith("ClassII DNA") and columns[2].endswith("MITE")):
+				if 'hAT' in columns[2]:
+					print(f'{columns[0]}\tTIR/hAT/unknown\tDeepTE *MITE', file=o) #TODO revisar se é correcto, MITE vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183
+				elif 'TcMar' in columns[2]:
+					print(f'{columns[0]}\tTIR/Tc1/Mariner\tDeepTE *MITE', file=o) #TODO revisar se é correcto, MITE vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183
+				elif 'Mutator' in columns[2]:
+					print(f'{columns[0]}\tTIR/MuDR/Mutator\tDeepTE *MITE', file=o) #TODO revisar se é correcto, MITE vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183
+				elif 'Harbinger' in columns[2]:
+					print(f'{columns[0]}\tTIR/PIF/Harbinger\tDeepTE *MITE', file=o) #TODO revisar se é correcto, MITE vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183
 			elif columns[1] == "Unknown" and columns[2] == "ClassII MITE" and columns[3] == "Unknown":
 				print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
+			#"Stowaway MITEs are derived from and mobilised by elements from the mariner superfamily. (https://pmc.ncbi.nlm.nih.gov/articles/PMC6881990/)"
+			elif columns[1] == "DNA/TcMar-Stowaway" and columns[2] == "ClassII DNA hAT nMITE" and columns[3].startswith("TIR/Tc1_Mariner"):
+				print(f'{columns[0]}\t{columns[1]}\tAll agree',file=o)
+			#"DNA transposons (TIR) and LTR can  be a template for satDNA formation. (https://link.springer.com/article/10.1007/s10577-015-9483-7)"
+			elif columns[1] == "Satellite" and 'MITE' in columns[2] and columns[2].startswith("ClassII DNA") and columns[3].startswith("LTR"):
+				print(f'{columns[0]}\t{columns[1]}\tOnly Earl Grey', file=o)
+			elif columns[1] == "Satellite" and 'MITE' in columns[2] and columns[2].startswith("ClassII DNA") and columns[3].startswith("Unknown"):
+				print(f'{columns[0]}\t{columns[1]}\tOnly Earl Grey', file=o)
+			elif columns[1] == "Satellite" and columns[2].startswith("ClassI ") and columns[3].startswith("Unknown"):
+				print(f'{columns[0]}\t{columns[1]}\tOnly Earl Grey', file=o)
 			#elif columns[1] == "DNA/CMC-EnSpm" and columns[2] == "ClassII DNA hAT MITE" and columns[3] == "Unknown":
-				
+				#print(f'{columns[0]}\t{columns[2]}\tOnly DeepTE',file=o)
 			#"To date, no MITE families have been reported to be related to the Maverick/Polinton, Transib, CACTA, or Merlin superfamilies.
 			#However, some MITE families show certain characteristic features that may identify them in these superfamilies."
 			#https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3290980/
@@ -157,6 +207,8 @@ def main():
 				print(f'{columns[0]}\t{columns[3]}\tAll agree', file=o)
 			elif columns[1] == "DNA/CMC-EnSpm" and columns[2].startswith("ClassII DNA CACTA") and columns[3] == 'Unknown':#EnSpm_CACTA is the same as CMC-EnSpm following https://www.jstage.jst.go.jp/article/ggs/94/6/94_18-00024/_html/-char/en
 				print(f'{columns[0]}\tTIR/EnSpm_CACTA/unknown\tEarl Grey and DeepTE', file=o)
+			elif columns[1] == "DNA/CMC-EnSpm" and columns[2].startswith("ClassI LTR") and columns[3].startswith("TIR/EnSpm_CACTA/"):
+				print(f'{columns[0]}\t{columns[3]}\tEarl Grey and TESorter', file=o)
 			elif columns[1].startswith("DNA/hAT-") and columns[2].startswith("ClassII DNA hAT") and (columns[3].startswith("TIR/hAT/") or columns[3] == "Unknown"):
 				if columns[3] == "Unknown":
 					col3sub = 'unknown'
@@ -179,15 +231,7 @@ def main():
 				else:
 					newclassif='TIR/hAT/unknown'
 				print(f'{columns[0]}\t{newclassif}\tAll agree', file=o)
-			elif columns[1] == 'Unknown' and columns[3] == 'Unknown' and (columns[2].startswith("ClassII DNA") and columns[2].endswith("MITE")):
-				if 'hAT' in columns[2]:
-					print(f'{columns[0]}\tTIR/hAT/unknown\tDeepTE *MITE', file=o) #TODO revisar se é correcto, MITe vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183
-				elif 'TcMar' in columns[2]:
-					print(f'{columns[0]}\tTIR/Tc1/Mariner\tDeepTE *MITE', file=o) #TODO revisar se é correcto, MITe vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183
-				elif 'Mutator' in columns[2]:
-					print(f'{columns[0]}\tTIR/MuDR/Mutator\tDeepTE *MITE', file=o) #TODO revisar se é correcto, MITe vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183
-				elif 'Harbinger' in columns[2]:
-					print(f'{columns[0]}\tTIR/PIF/Harbinger\tDeepTE *MITE', file=o) #TODO revisar se é correcto, MITe vs nMITE https://academic.oup.com/bioinformatics/article/36/15/4269/5838183							
+							
 			# elif columns[1] == 'Unknown' and columns[3] == 'Unknown' and columns[2].startswith("ClassI LTR") and columns[0] not in deeptedomains.keys():
 					# print(f'{columns[0]}\tUnknown\tNone', file=o)
 			#elif columns[1] == 'Unknown' and columns[3] == 'Unknown':
