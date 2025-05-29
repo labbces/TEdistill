@@ -44,10 +44,10 @@ def parse_arguments():
 
 def log (msg, level=1,  verbose=1):
     #Verbose levels should be one of:
-    # 0 Silent Only critical errors
-    # 1 Normal Key steps, progress messages
-    # 2 Debug Extra info: file paths, filtered seqs
-    # 3 Trace Fine-grained steps. per-TE messages, etc
+    # 0 Silent CRITICAL Only critical errors
+    # 1 Normal INFO     Key steps, progress messages
+    # 2 Debug  DEBUG    Extra info: file paths, filtered seqs
+    # 3 Trace  TRACE    Fine-grained steps. per-TE messages, etc
     if verbose >= level:
         print(msg)
 
@@ -143,8 +143,7 @@ def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
             
             SeqIO.write(record, out_handle, "fasta")
     
-    log ()if verbose > 0:
-        print(f"[INFO] IDs convertidos parcialmente em: {fasta_path} (original salvo como {orig_path})")
+    log(f"[INFO] IDs convertidos parcialmente em: {fasta_path} (original salvo como {orig_path})", 1, verbose)
 
 def find_expected_files(in_path, suffixes,identifiers, verbose):
     countOK=0
@@ -219,12 +218,11 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                             full_len = TEe + TEleft
                             length = TEe - TEs + 1
                             if length / (full_len + 1) >= min_cov:
-                                # print(f'DIEGO STRICT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs}')
+                                log(f"[TRACE] STRICT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 3, verbose)
                                 if TEidClassFam in count_TE_identifiers.keys():
                                     count_TE_identifiers[TEidClassFam]+=1
                                 else:
                                     count_TE_identifiers[TEidClassFam]=1
-                            #print(line, end='',file=o)  # Print the line if the condition is met.
                 else:
                     #If not stringent, apply the divergence, insertion, and deletion limits.
                     if div <= max_div and ins <= max_ins and del_ <= max_del:
@@ -232,8 +230,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                             if verbose > 10:
                                 print(f"[WARNING] Invalid consensus coordinates: TEs={TEs}, TEe={TEe}, TEleft={TEleft} for TE {id_} in {genomeFilePrefix}. Skipping.")
                             continue
-                        # print(f'DIEGO LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs}')
-                        # print(line)
+                        log(f"[TRACE] LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 3, verbose)
                         full_len, length = 0, 0
                         #Calculate full length and actual length for strand "+".
                         full_len = TEe + TEleft
@@ -244,8 +241,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                                 count_TE_identifiers[TEidClassFam]+=1
                             else:
                                 count_TE_identifiers[TEidClassFam]=1
-                            #print(line, end='',file=o)  # Print the line if the condition is met.
-        print(f"Writing full length TEs that appear more than {fl_copy} times in the genome. Outfiles: {out_flTE} and {outfa_flTE}")
+        log(f"[INFO] Writing full length TEs that appear more than {fl_copy} times in the genome. Outfiles: {out_flTE} and {outfa_flTE}", 1, verbose)
 
         #Indexing TE families fasta
         #
