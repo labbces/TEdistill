@@ -280,9 +280,8 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
 
 def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen,
               iteration, out_path, fileiter, coverage=0.95, offset=7, stat_list=None, verbose=1):
-    if verbose > 3:
-        print(f'{sequence_id}')
-
+    log(f"[DEBUG] Processing sequence {sequence_id} for iteration {iteration}", 2, verbose)
+    
     if "#" in sequence_id:
         sequence_id2 = sequence_id.split("#")[0]
     else:
@@ -305,14 +304,12 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         '-word_size', '7',
         '-dust', 'no'
     ]
-
-    if verbose > 3:
-        print(f"Running BLAST for {sequence_id} (iteration {iteration})")
-
+    log(f"[DEBUG] Running BLAST for {sequence_id} (iteration {iteration})", 2, verbose)
+    
     try:
         subprocess.run(blast_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as e:
-        print(f"Error running BLAST for sequence {sequence_id}: {e}")
+        log(f"[CRITICAL] BLAST failed for {sequence_id}: {e}", 0, verbose)
         os.remove(temp_fasta)
         return
 
@@ -355,10 +352,9 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         total_len = sum(l for l, _ in aln_iden)
         scaled_iden = sum(l * i for l, i in aln_iden) / total_len if total_len > 0 else 0
 
-        if verbose > 3:
-            print(f" Subject: {subject}, {len(hsps[subject])} HSPs → {len(merged_hsps)} merged (offset={offset})")
-            print(f"  qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}")
-
+        log(f"[TRACE] Subject {subject}, {len(hsps[subject])} HSPs → {len(merged_hsps)} merged (offset={offset}): qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}, merged_count={merged_count}", 3, verbose)
+        
+        # Check if the sequence should be kept or cleaned
         if qcov >= coverage or scov >= coverage:
             subjectseq = list(str(fasta_dict[subject].seq))
             for start, end in merged_hsps:
