@@ -11,10 +11,10 @@ from multiprocessing import Manager, Pool
 #TODO removing IDX files and pre-pan file before running the script
 
 #Example run
-#python3 panTE.py -p /home/eduardo/Documentos/panTE/ -l genome.list -c 3 -d 20 -i 10 -e 10 -v 0.8
+#TODO: Example run
 def parse_arguments():
     #Configuring arguments
-    parser = argparse.ArgumentParser(description='Generates a panTE file from genome-specific runs of TE annotation')
+    parser = argparse.ArgumentParser(description='Generates a distilled TE file from genome-specific runs of TE annotation in several especies')
 
     parser.add_argument('-l', '--prefix_list', default='genome.list',
                         help='Text file with a list of genome file prefixes. Default is "genome.list".')
@@ -30,7 +30,7 @@ def parse_arguments():
     parser.add_argument('-e', '--dele', default=10, type=float, help='Maximum deletion allowed. Default is 10.')
     parser.add_argument('-v', '--cov', default=0.8, type=float, help='Minimum coverage allowed. Default is 0.8.')
     parser.add_argument('--iter', default=None, type=int, help='Max number of iterations to remove nested sequences. If not set, run until saturation.')
-    parser.add_argument('--minhsplen', default=80, type=int, help='Minimum HSP length. Default is 80 (bp).')
+    #parser.add_argument('--minhsplen', default=80, type=int, help='Minimum HSP length. Default is 80 (bp).')
     parser.add_argument('--minhspident', default=80, type=int, help='Minimum HSP identity. Default is 80 (%%).')
     parser.add_argument('--minlen', default=80, type=int, help='Minimum length of the cleaned sequence to retain. Default is 80 (bp).')
     parser.add_argument('--minident', default=80, type=int, help='Minimum identity of the cleaned sequence to retain. Default is 80 (%%).')
@@ -42,7 +42,14 @@ def parse_arguments():
 
     return parser.parse_args()
 
-
+def log (msg, level=1,  verbose=1):
+    #Verbose levels should be one of:
+    # 0 Silent Only critical errors
+    # 1 Normal Key steps, progress messages
+    # 2 Debug Extra info: file paths, filtered seqs
+    # 3 Trace Fine-grained steps. per-TE messages, etc
+    if verbose >= level:
+        print(msg)
 
 def blast_wrapper(args):
     (sequence_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
@@ -105,6 +112,7 @@ def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
     """
     Renomeia o arquivo FASTA original para .orig e cria um novo com:
     - Parte à esquerda do '#' (família) em uppercase
+    #TODO: REmove the classification info. We shoudl recommend to re-classify the final file, after removing nested TEs
     - Parte à direita do '#' (classe) preservada como está
     - description = ID final (sem espaço ou anotações extras)
     
@@ -135,7 +143,7 @@ def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
             
             SeqIO.write(record, out_handle, "fasta")
     
-    if verbose > 0:
+    log ()if verbose > 0:
         print(f"[INFO] IDs convertidos parcialmente em: {fasta_path} (original salvo como {orig_path})")
 
 def find_expected_files(in_path, suffixes,identifiers, verbose):
@@ -175,15 +183,12 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                 columns = line.split()
                 if len(columns) < 14:
                     continue
-                if programtype == 'EarlGrey':
-                    if columns[0] == 'SW':
-                        continue
-                    if columns[0] == 'score':
-                        continue
-
-                elif programtype == 'EDTA':
-                    if columns[0] == 'SW_score':
-                        continue
+                if columns[0] == 'SW':
+                    continue
+                if columns[0] == 'score':
+                    continue
+                if columns[0] == 'SW_score':
+                    continue
 
                 if columns[8] == '+':
                     SW, div, del_, ins = int(columns[0]), float(columns[1]), float(columns[2]), float(columns[3])
@@ -202,6 +207,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                 if not re.match(r'[0-9]+', str(SW)):
                     continue
 
+                #TODO: Remove classification information
                 TEidClassFam= f'{id_.upper()}#{type_}'
 
                 #Apply stringent conditions if stringent == 1.
