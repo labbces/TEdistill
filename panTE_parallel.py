@@ -227,8 +227,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                     #If not stringent, apply the divergence, insertion, and deletion limits.
                     if div <= max_div and ins <= max_ins and del_ <= max_del:
                         if TEe < 0 or TEs < 0 or TEleft < 0:
-                            if verbose > 10:
-                                print(f"[WARNING] Invalid consensus coordinates: TEs={TEs}, TEe={TEe}, TEleft={TEleft} for TE {id_} in {genomeFilePrefix}. Skipping.")
+                            log(f"[TRACE] Invalid consensus coordinates: TEs={TEs}, TEe={TEe}, TEleft={TEleft} for TE {id_} in {genomeFilePrefix}. Skipping.", 3, verbose)
                             continue
                         log(f"[TRACE] LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 3, verbose)
                         full_len, length = 0, 0
@@ -265,16 +264,16 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                         SeqIO.write(TE_fasta[TE], ofa, "fasta")
                         print(f'{TE}\t{newID}\t{count_TE_identifiers[TE]}',file=o)
                     else:
-                        print(f"TE {TE} not found in the TE fasta file {teSequenceFile}")
-            print(f"Selected {countTEs} full-length TEs for {genomeFilePrefix}.")
+                        log(f"[CRITICAL] TE {TE} not found in the TE fasta file {teSequenceFile}", 0, verbose)
+            log(f"[INFO] Selected {countTEs} full-length TEs for {genomeFilePrefix}", 1, verbose)
 
         #Verify that the .flTE.list and .flTE.fa files are not empty.
         if os.path.getsize(out_flTE) == 0 :
-            print(f"Error: {out_flTE} is empty. Check your filters or your input file.")
+            log(f"[CRITICAL] {out_flTE} is empty. Check your filters or your input file", 0, verbose)
             exit(1)
 
         if os.path.getsize(outfa_flTE) == 0:
-            print(f"Error: {outfa_flTE} is empty. Check your filters or your input file.")
+            log(f"[CRITICAL] {outfa_flTE} is empty. Check your filters or your input file", 0, verbose)
             exit(1)
 
 #Final file *flTE.fa
@@ -539,7 +538,7 @@ def main():
     #TODO: Check if output_path exists, if not create it. 
     # And whether it contains the type of files that will be written, if yes produce an error messesage to the user and stop the process.
 
-    #Processes arguments
+     #Processes arguments
     args = parse_arguments()
     fileSuffixes=[]
     if args.type == 'EarlGrey':
