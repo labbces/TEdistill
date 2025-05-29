@@ -470,6 +470,7 @@ def remove_nested_sequences2(in_path, out_path, iteration, minhsplen, minhspiden
     prev_count = -1
 
     for iter in range(0, iteration if iteration > 0 else 100):
+        #TODO: check that input files are not empy, if empty stop iterations
         fileiter = f'{out_path}/panTE.flTE.iter{iter}.fa'
         fileiteridx = f'{fileiter}.idx'
 
@@ -535,6 +536,9 @@ def join_and_rename(in_path,out_path,genomeFilePrefixes):
                 SeqIO.write(newrecord, o, "fasta")
 
 def main():
+    #TODO: Check if output_path exists, if not create it. 
+    # And whether it contains the type of files that will be written, if yes produce an error messesage to the user and stop the process.
+
     #Processes arguments
     args = parse_arguments()
     fileSuffixes=[]
