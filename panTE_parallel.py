@@ -42,7 +42,8 @@ def parse_arguments():
 
     return parser.parse_args()
 
-def log (msg, level=1,  verbose=1):
+def log (msg, level=1,  verbose=0):
+    #DEfault verbose level is 1 (normal)
     #Verbose levels should be one of:
     # 0 Silent CRITICAL Only critical errors
     # 1 Normal INFO     Key steps, progress messages
@@ -396,7 +397,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         initial_input = f"{out_path}/pre_panTE.flTE.fa"
         shutil.copy(initial_input, f"{out_path}/panTE.flTE.iter0.fa")
     else:
-        print(f"[INFO] Resuming from iteration {iteration}")
+        log(f"[INFO] Resuming from iteration {iteration}", 1, verbose)
 
     manager = Manager()
     keep_TEs = manager.dict()
@@ -427,15 +428,14 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
                 SeqIO.write(newrecord, o, "fasta")
 
         if not any(results):
-            print(f"[INFO] Saturated: no further changes at iteration {iteration}.")
+            log(f"[INFO] Saturated: no further changes at iteration {iteration}", 1, verbose)
             break
 
         if max_iter is not None and iteration + 1 >= max_iter:
-            print(f"[INFO] Max iterations ({max_iter}) reached.")
+            log(f"[INFO] Max iterations ({max_iter}) reached", 1, verbose)
             break
 
-        if verbose:
-            print(f"[INFO] Iteration {iteration} complete, {sum(results)} sequences changed.")
+        log(f"[INFO] Iteration {iteration} complete, {sum(results)} sequences changed", 1, verbose)
 
         iteration += 1
         keep_TEs.clear()
@@ -494,11 +494,10 @@ def remove_nested_sequences2(in_path, out_path, iteration, minhsplen, minhspiden
                 SeqIO.write(newrecord, o, "fasta")
 
         if not any(results):
-            print(f"Auto-stopping: Saturated at iteration {iter}.")
+            log(f"[INFO] Auto-stopping: Saturated at iteration {iter}", 1, verbose)
             return
         else:
-            if verbose > 0:
-                print(f"Iteration {iter} completed with {sum(results)} sequences changed.")
+            log(f"[INFO] Iteration {iter} completed with {sum(results)} sequences changed", 1, verbose)
 
         keep_TEs.clear()
         touched_TEs.clear()
@@ -542,30 +541,30 @@ def main():
     elif args.type == 'EDTA':
         fileSuffixes = ['EDTA.TEfamilies.fa', 'EDTA.RM.out', 'fna']
     else:
-        print(f'Program type not allowed {args.type}')
+        log(f"[CRITICAL] Program type not allowed {args.type}", 0, args.verbose)
         return
 
     #Verify if BLAST+ is installed
     blast_path = shutil.which("makeblastdb")
     if not blast_path:
-        print(f"makeblastdb is not found in the PATH. Please install BLAST+, before continuing.")
+        log(f"[CRITICAL] makeblastdb is not found in the PATH. Please install BLAST+, before continuing", 0, args.verbose)
         return
 
     #Read file identifiers
     genomeFilePrefixes = read_identifiers(args.prefix_list)
 
     if not genomeFilePrefixes:
-        print("No genome identifiers found.")
+        log(f"[CRITICAL] No genome identifiers found", 0, args.verbose)
         return
 
     #Finds matching files
     found_files = find_expected_files(args.in_path, fileSuffixes, genomeFilePrefixes, args.verbose)
 
     if not found_files:
-        print("Some files are missing. Check your input.")
+        log(f"[CRITICAL] Some files are missing. Check your input", 0, args.verbose)
         return
 
-    print("All required files found. Starting pipeline.")
+    log(f"[INFO] All required files found. Starting pipeline.", 1, args.verbose)
 
     get_flTE(
         args.in_path, args.out_path, genomeFilePrefixes,
