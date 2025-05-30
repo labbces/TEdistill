@@ -446,67 +446,6 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
             for line in stat_list:
                 f.write(line + "\n")
 
-
-
-#####
-
-def remove_nested_sequences2(in_path, out_path, iteration, minhsplen, minhspident, minlen, nproc=1, offset=7, coverage=0.95, verbose=1, stat_file=None):
-    blast_output_dir = os.path.join(out_path, "blast_results")
-    os.makedirs(blast_output_dir, exist_ok=True)
-
-    flTE = f'{out_path}/pre_panTE.flTE.fa'
-    shutil.copy(flTE, f'{out_path}/panTE.flTE.iter0.fa')
-
-    manager = Manager()
-    keep_TEs = manager.dict()
-    touched_TEs = manager.dict()
-    stat_list = manager.list() if stat_file else None
-
-    prev_count = -1
-
-    for iter in range(0, iteration if iteration > 0 else 100):
-        #TODO: check that input files are not empy, if empty stop iterations
-        fileiter = f'{out_path}/panTE.flTE.iter{iter}.fa'
-        fileiteridx = f'{fileiter}.idx'
-
-        #fasta_dict = SeqIO.index_db(fileiteridx, fileiter, "fasta")
-
-        subprocess.run(['makeblastdb', '-in', fileiter, '-dbtype', 'nucl'], check=True)
-
-        changed_flags = manager.list()
-
-        with open(fileiter, "r") as f:
-            sequence_ids = [record.id for record in SeqIO.parse(f, "fasta")]
-
-        task_args = [
-            (seq_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
-                  minhsplen, minhspident, minlen, iter, out_path, coverage, offset, stat_list, verbose)
-                          for seq_id in sequence_ids
-        ]
-
-        with Pool(processes=nproc) as pool:
-            results = pool.map(blast_wrapper, task_args)
-
-        outPan = f'{out_path}/panTE.flTE.iter{iter+1}.fa'
-        with open(outPan, "w") as o:
-            for TE in keep_TEs.keys():
-                newrecord = SeqRecord(Seq(keep_TEs[TE]), id=TE, description='')
-                SeqIO.write(newrecord, o, "fasta")
-
-        if not any(results):
-            log(f"[INFO] Auto-stopping: Saturated at iteration {iter}", 1, verbose)
-            return
-        else:
-            log(f"[INFO] Iteration {iter} completed with {sum(results)} sequences changed", 1, verbose)
-
-        keep_TEs.clear()
-        touched_TEs.clear()
-
-    if stat_file:
-        with open(stat_file, "w") as f:
-            for line in stat_list:
-                f.write(line + "\n")
-
 def join_and_rename(in_path,out_path,genomeFilePrefixes):
     countTEs=0
 
