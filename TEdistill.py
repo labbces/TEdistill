@@ -14,7 +14,7 @@ from multiprocessing import Manager, Pool
 #TODO: Example run
 def parse_arguments():
     #Configuring arguments
-    parser = argparse.ArgumentParser(description='Generates a distilled TE file from genome-specific runs of TE annotation in several especies')
+    parser = argparse.ArgumentParser(description='Generates a distilled TE file from genome-specific runs of TE annotation in several species')
 
     parser.add_argument('-l', '--prefix_list', default='genome.list',
                         help='Text file with a list of genome file prefixes. Default is "genome.list".')
@@ -43,7 +43,7 @@ def parse_arguments():
     return parser.parse_args()
 
 def log (msg, level=1,  verbose=0):
-    #DEfault verbose level is 1 (normal)
+    #Default verbose level is 1 (normal)
     #Verbose levels should be one of:
     # 0 Silent CRITICAL Only critical errors
     # 1 Normal INFO     Key steps, progress messages
@@ -113,7 +113,7 @@ def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
     """
     Renomeia o arquivo FASTA original para .orig e cria um novo com:
     - Parte à esquerda do '#' (família) em uppercase
-    #TODO: REmove the classification info. We shoudl recommend to re-classify the final file, after removing nested TEs
+    #TODO: Remove the classification info. We should recommend to re-classify the final file, after removing nested TEs
     - Parte à direita do '#' (classe) preservada como está
     - description = ID final (sem espaço ou anotações extras)
     
@@ -123,7 +123,7 @@ def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
     """
     if not os.path.isfile(fasta_path):
         if verbose:
-            print(f"Arquivo não encontrado: {fasta_path}")
+            print(f"File not found: {fasta_path}")
         return
     
     orig_path = f"{fasta_path}.orig"
@@ -389,13 +389,13 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
 
     # Find last iteration file
     iteration = 0
-    while os.path.exists(f"{out_path}/panTE.flTE.iter{iteration+1}.fa"):
+    while os.path.exists(f"{out_path}/distilledTE.flTE.iter{iteration+1}.fa"):
         iteration += 1
 
     if iteration == 0:
         # First run
-        initial_input = f"{out_path}/pre_panTE.flTE.fa"
-        shutil.copy(initial_input, f"{out_path}/panTE.flTE.iter0.fa")
+        initial_input = f"{out_path}/pre_distilledTE.flTE.fa"
+        shutil.copy(initial_input, f"{out_path}/distilledTE.flTE.iter0.fa")
     else:
         log(f"[INFO] Resuming from iteration {iteration}", 1, verbose)
 
@@ -405,7 +405,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
     stat_list = manager.list() if stat_file else None
 
     while True:
-        fileiter = f'{out_path}/panTE.flTE.iter{iteration}.fa'
+        fileiter = f'{out_path}/distilledTE.flTE.iter{iteration}.fa'
         subprocess.run(['makeblastdb', '-in', fileiter, '-dbtype', 'nucl'], check=True)
 
         with open(fileiter, "r") as f:
@@ -421,8 +421,8 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         with Pool(processes=nproc) as pool:
             results = pool.map(blast_wrapper, task_args)
 
-        outPan = f'{out_path}/panTE.flTE.iter{iteration+1}.fa'
-        with open(outPan, "w") as o:
+        outDistilled = f'{out_path}/distilledTE.flTE.iter{iteration+1}.fa'
+        with open(outDistilled, "w") as o:
             for TE in keep_TEs:
                 newrecord = SeqRecord(Seq(keep_TEs[TE]), id=TE, description='')
                 SeqIO.write(newrecord, o, "fasta")
@@ -449,7 +449,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
 def join_and_rename(in_path,out_path,genomeFilePrefixes):
     countTEs=0
 
-    out_flTE=f'{out_path}/pre_panTE.flTE.fa'
+    out_flTE=f'{out_path}/pre_distilledTE.flTE.fa'
     for genomeFilePrefix in genomeFilePrefixes:
         in_flTE=f'{out_path}/{genomeFilePrefix}.flTE.fa'
         mapids_flTE = f'{out_path}/{genomeFilePrefix}.flTE.mapids'
