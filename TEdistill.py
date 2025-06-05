@@ -168,7 +168,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
         outfa_flTE=f'{out_path}/{genomeFilePrefix}.flTE.fa'
         filePath = f'{in_path}/{genomeFilePrefix}.{programtype}.RM.out'
         teSequenceFile = f'{in_path}/{genomeFilePrefix}.{programtype}.TEfamilies.fa'
-        print(filePath)
+        log(f"[INFO] Processing file: {filePath}", 1, verbose)
         with open(filePath, 'r') as f:
             #Loop over the input lines.
             for line in f:
