@@ -4,19 +4,19 @@ This is our script to generate a full-length transposable elements (TE) library 
 
 # Installing
 
-First, create a Python environment in which some dependencies will be installed, such as biopython.
+First, clone the TEdistill repository:
+
+```
+#SSH cloning example:
+git clone git@github.com:labbces/TEdistill.git
+```
+
+Then, create a Python environment in which some dependencies will be installed, such as biopython.
 
 ```
 python -m venv .venv
 . ./.venv/bin/activate 
 pip install biopython
-```
-
-Then, clone the TEdistill repository:
-
-```
-#SSH cloning example:
-git clone git@github.com:labbces/TEdistill.git
 ```
 
 # Usage
@@ -61,7 +61,7 @@ TEdistill.py -l path/to/genome.list --in_path path/to/input_files --out_path pat
 
 Many other arguments can be adjusted as needed. You can check for more details in --help:
 ```
-usage: panTE_parallel.py [-h] [-l PREFIX_LIST] --in_path IN_PATH --out_path
+usage: TEdistill.py [-h] [-l PREFIX_LIST] --in_path IN_PATH --out_path
                          OUT_PATH [-c FL_COPY] [-s] [-d DIV] [-i INS]
                          [-e DELE] [-v COV] [--iter ITER]
                          [--minhspident MINHSPIDENT] [--minlen MINLEN]
