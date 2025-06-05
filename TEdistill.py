@@ -408,7 +408,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         fileiter = f'{out_path}/distilledTE.flTE.iter{iteration}.fa'
         res_makeblastdb=subprocess.run(['makeblastdb', '-in', fileiter, '-dbtype', 'nucl'], check=True, text=True,stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         log(f"[INFO] Created blastdb iteration {iteration}", 1, verbose)
-        log(f"[INFO] Created blastdb iteration {iteration}:\n {res_makeblastdb.stdout}", 2, verbose)
+        log(f"[TRACE] Created blastdb iteration {iteration}:\n {res_makeblastdb.stdout}", 2, verbose)
 
         with open(fileiter, "r") as f:
             sequence_ids = [record.id for record in SeqIO.parse(f, "fasta")]
