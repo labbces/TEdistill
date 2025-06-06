@@ -24,16 +24,16 @@ if ! command -v makeblastdb &> /dev/null; then
 fi
 
 #Base directory for output files
-OUTPUT_BASE_DIR="/Storage/data2/andreza.cunha/results/PanTE"
+OUTPUT_BASE_DIR="/Storage/data2/andreza.cunha/results/TEdistill"
 
 #Number of max iterations for loop
-MAX_ITER=1
+MAX_ITER=until_saturation
 
 #Input directory and genome list
-INPUT_DIR="/Storage/data2/andreza.cunha/repositories/panTE.old/test/input_files"
-GENOME_LIST="/Storage/data2/andreza.cunha/repositories/panTE.old/test/genome.list"
+INPUT_DIR="/Storage/data2/andreza.cunha/data/TEdistill_run_data"
+GENOME_LIST="/Storage/data2/andreza.cunha/data/TEdistill_run_data/genome.list"
 
-echo "Running PanTE with $MAX_ITER iterations..."
+echo "Running TEdistill with $MAX_ITER iterations..."
 
 #Creates a specific output directory for this iteration
 OUTPUT_DIR="${OUTPUT_BASE_DIR}/iter_${MAX_ITER}"
@@ -44,24 +44,16 @@ cd "$OUTPUT_DIR" || { echo "Failed to access the $OUTPUT_DIR"; exit 1; }
     
 
 #Run python script
-python3 -u /Storage/data2/andreza.cunha/repositories/panTE/panTE_parallel.py --in_path "$INPUT_DIR" \
-                     --out_path "$OUTPUT_DIR" \
-                     -l "$GENOME_LIST" \
-                     -c 3 \
-                     -d 20 \
-                     -i 10 \
-                     -e 10 \
-                     -v 0.8 \
-                     --iter "$MAX_ITER"
+python3 /Storage/data2/andreza.cunha/scripts/TEdistill.py -l "$GENOME_LIST" --in_path "$INPUT_DIR" --out_path "$OUTPUT_DIR" -c 3
 
 if [ $? -ne 0 ]; then
-        echo "Error executing PanTE with $MAX_ITER iterations."
+        echo "Error executing TEdistill with $MAX_ITER iterations."
         exit 1
 fi
 
 #Return to original directory
 cd - > /dev/null
 
-echo "PanTE with $MAX_ITER iteration finished. Results in: $OUTPUT_DIR"
+echo "TEdistill with $MAX_ITER iteration finished. Results in: $OUTPUT_DIR"
 
 echo "Execution completed!"
