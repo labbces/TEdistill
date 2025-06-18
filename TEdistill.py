@@ -111,15 +111,15 @@ def read_identifiers(file):
 
 def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
     """
-    Renomeia o arquivo FASTA original para .orig e cria um novo com:
-    - Parte à esquerda do '#' (família) em uppercase
+    Renames the original FASTA file to .orig and creates a new one with:
+    - The left part of '#' (family) is changed to uppercase
     #TODO: Remove the classification info. We should recommend to re-classify the final file, after removing nested TEs
-    - Parte à direita do '#' (classe) preservada como está
-    - description = ID final (sem espaço ou anotações extras)
+    - The right part of '#' (class) is kept as it is
+    - description = final ID (no spaces or additional annotations)
     
     Args:
-        fasta_path (str): Caminho para o arquivo FASTA a ser processado.
-        verbose (int): Nível de verbosidade.
+        fasta_path (str): Path to the FASTA file to be processed
+        verbose (int): Verbosity level
     """
     if not os.path.isfile(fasta_path):
         if verbose:
@@ -131,20 +131,20 @@ def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
     
     with open(fasta_path, 'w') as out_handle:
         for record in SeqIO.parse(orig_path, "fasta"):
-            # separa em família e classe, se houver '#'
+            #Separate into family and class, if '#' present
             if '#' in record.id:
                 family, teclass = record.id.split('#', 1)
                 new_id = f"{family.upper()}#{teclass}"
             else:
-                new_id = record.id.upper()  # fallback
+                new_id = record.id.upper()  #Fallback
             
             record.id = new_id
             record.name = new_id
-            record.description = new_id  # limpa qualquer descrição adicional
+            record.description = new_id  #Clean any additional description
             
             SeqIO.write(record, out_handle, "fasta")
     
-    log(f"[INFO] IDs convertidos parcialmente em: {fasta_path} (original salvo como {orig_path})", 1, verbose)
+    log(f"[INFO] IDs partially converted in: {fasta_path} (original saved as {orig_path})", 1, verbose)
 
 def find_expected_files(in_path, suffixes,identifiers, verbose):
     countOK=0
@@ -244,7 +244,6 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
         log(f"[INFO] Writing full length TEs that appear more than {fl_copy} times in the genome. Outfiles: {out_flTE} and {outfa_flTE}", 1, verbose)
 
         #Indexing TE families fasta
-        #
         TE_fasta = SeqIO.index(teSequenceFile, "fasta")
 
         #print(list(TE_fasta.keys()))
