@@ -436,6 +436,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
             break
 
         log(f"[INFO] Iteration {iteration} complete, {sum(results)} sequences changed", 1, verbose)
+        #TODO: print a three column line, with data, iter and sum(results) and print into a file.
 
         iteration += 1
         keep_TEs.clear()
