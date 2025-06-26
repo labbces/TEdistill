@@ -9,7 +9,6 @@ import subprocess
 from multiprocessing import Manager, Pool
 
 #TODO removing IDX files and pre-pan file before running the script
-#TODO Translated everything to english
 #Example run
 #TODO: Example run
 def parse_arguments():
@@ -470,11 +469,19 @@ def join_and_rename(in_path,out_path,genomeFilePrefixes):
                 SeqIO.write(newrecord, o, "fasta")
 
 def main():
-    #TODO: Check if output_path exists, if not create it. 
-    # And whether it contains the type of files that will be written, if yes produce an error messesage to the user and stop the process.
-
      #Processes arguments
     args = parse_arguments()
+
+    if not os.path.exists(args.out_path):
+        os.makedirs(args.out_path)
+    else:
+        log(f"[INFO] Output path {args.out_path} already exists. Continuing.", 1, args.verbose)
+        if os.path.exists(f'{args.out_path}/distilledTE.flTE.iter0.fa'):
+            #TODO: If ther eis a previous run, this part will stop the whole process.
+            # Check if how can we resume a previous run.
+            log(f"[ERROR] Output path {args.out_path} already contains a distilledTE file. Continuing.", 0, args.verbose)
+            return
+        
     fileSuffixes=[]
     if args.type == 'EarlGrey':
         fileSuffixes = ['EarlGrey.TEfamilies.fa', 'EarlGrey.RM.out', 'fna']
