@@ -7,6 +7,7 @@ from Bio.SeqRecord import SeqRecord
 import shutil
 import subprocess
 from multiprocessing import Manager, Pool
+from datetime import datetime
 
 #TODO removing IDX files and pre-pan file before running the script
 #Example run
@@ -38,6 +39,8 @@ def parse_arguments():
     parser.add_argument('--offset', default=7, type=int, help='Max distance (bp) to merge adjacent HSPs. Default is 7.')
     parser.add_argument('--stat_file', default=None, type=str, help='Optional: path to save detailed stat log.')
     parser.add_argument('--type', default='EarlGrey', type=str, help='Optional: TE detection software, could be EarlGrey or EDTA, default is EarlGrey.')
+    parser.add_argument('--resume', action='store_true', default=False, help= 'Resume a previous run if output files already exist.')
+    parser.add_argument('--overwrite', action='store_true', default=False, help='Delete existing output and start a new run from scratch. Default is False.')
 
     return parser.parse_args()
 
@@ -436,7 +439,11 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
             break
 
         log(f"[INFO] Iteration {iteration} complete, {sum(results)} sequences changed", 1, verbose)
-        #TODO: print a three column line, with data, iter and sum(results) and print into a file.
+        #TODO: Print a three column line, with data, iter and sum(results) and print into a file.
+        with open(os.path.join(out_path, "log_iterations.txt"), "a") as log_file:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            line = f"{now} | Iteration: {iteration} | Changed sequences: {sum(results)}\n"
+            log_file.write(line)
 
         iteration += 1
         keep_TEs.clear()
@@ -473,15 +480,37 @@ def main():
      #Processes arguments
     args = parse_arguments()
 
-    if not os.path.exists(args.out_path):
-        os.makedirs(args.out_path)
+    #In case of a previous run already exists, we can resume or overwrite the run.
+    file_first_iter = os.path.join(args.out_path, 'distilledTE.flTE.iter0.fa')
+
+    if os.path.exists(args.out_path):
+        log(f"[INFO] Output path {args.out_path} already exists.", 1, args.verbose)
+        if os.path.exists(first_iter_file):
+            if args.overwrite:
+                log(f"[WARNING] Overwrite enabled. Deleting previous output in {args.out_path}", 1, args.verbose)
+                shutil.rmtree(args.out_path)
+                os.makedirs(args.out_path)
+            elif args.resume:
+                log(f"[INFO] Resuming previous run from {first_iter_file}", 1, args.verbose)
+            else:
+                log(f"[ERROR] Previous run detected in {args.out_path}. Use --resume to continue or --overwrite to start over.", 0, args.verbose)
+                return
+        else:
+            log(f"[INFO] No previous distilledTE file found in output path. Proceeding normally.", 1, args.verbose)
     else:
-        log(f"[INFO] Output path {args.out_path} already exists. Continuing.", 1, args.verbose)
-        if os.path.exists(f'{args.out_path}/distilledTE.flTE.iter0.fa'):
-            #TODO: If ther eis a previous run, this part will stop the whole process.
-            # Check if how can we resume a previous run.
-            log(f"[ERROR] Output path {args.out_path} already contains a distilledTE file. Continuing.", 0, args.verbose)
-            return
+        os.makedirs(args.out_path)
+
+
+#    if not os.path.exists(args.out_path):
+#        os.makedirs(args.out_path)
+#    else:
+#        log(f"[INFO] Output path {args.out_path} already exists. Continuing.", 1, args.verbose)
+#        if os.path.exists(f'{args.out_path}/distilledTE.flTE.iter0.fa'):
+#            #TODO: If there is a previous run, this part will stop the whole process.
+#            # Check if can we resume a previous run.
+#            log(f"[ERROR] Output path {args.out_path} already contains a distilledTE file. Continuing.", 0, args.verbose)
+#            return
+
         
     fileSuffixes=[]
     if args.type == 'EarlGrey':
