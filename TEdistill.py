@@ -485,7 +485,7 @@ def main():
 
     if os.path.exists(args.out_path):
         log(f"[INFO] Output path {args.out_path} already exists.", 1, args.verbose)
-        if os.path.exists(first_iter_file):
+        if os.path.exists(file_first_iter):
             if args.overwrite:
                 log(f"[WARNING] Overwrite enabled. Deleting previous output in {args.out_path}", 1, args.verbose)
                 shutil.rmtree(args.out_path)
