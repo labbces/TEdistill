@@ -39,7 +39,6 @@ def parse_arguments():
     parser.add_argument('--offset', default=7, type=int, help='Max distance (bp) to merge adjacent HSPs. Default is 7.')
     parser.add_argument('--stat_file', default=None, type=str, help='Optional: path to save detailed stat log.')
     parser.add_argument('--type', default='EarlGrey', type=str, help='Optional: TE detection software, could be EarlGrey or EDTA, default is EarlGrey.')
-    parser.add_argument('--resume', action='store_true', default=False, help= 'Resume a previous run if output files already exist.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='Delete existing output and start a new run from scratch. Default is False.')
 
     return parser.parse_args()
@@ -382,7 +381,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
 
 
 
-
+ 
 def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, nproc=1,
                             offset=7, coverage=0.95, verbose=1, stat_file=None, max_iter=None):
     iteration_path = os.path.join(out_path, "iterations")
@@ -492,38 +491,25 @@ def main():
      #Processes arguments
     args = parse_arguments()
 
-    #In case of a previous run already exists, we can resume or overwrite the run.
-    file_first_iter = os.path.join(args.out_path, 'distilledTE.flTE.iter0.fa')
-
     if os.path.exists(args.out_path):
         log(f"[INFO] Output path {args.out_path} already exists.", 1, args.verbose)
-        if os.path.exists(file_first_iter):
-            if args.overwrite:
-                log(f"[WARNING] Overwrite enabled. Deleting previous output in {args.out_path}", 1, args.verbose)
-                shutil.rmtree(args.out_path)
-                os.makedirs(args.out_path)
-            elif args.resume:
-                log(f"[INFO] Resuming previous run from {file_first_iter}", 1, args.verbose)
-            else:
-                log(f"[ERROR] Previous run detected in {args.out_path}. Use --resume to continue or --overwrite to start over.", 0, args.verbose)
-                return
+        
+        # If the --overwrite option was not used, the script stops.
+        if not args.overwrite:
+            log(f"[ERROR] Output path {args.out_path} already exists. Use --overwrite to proceed.", 0, args.verbose)
+            return
+            
+        # If --overwrite was used, the script deletes the directory and starts over.
         else:
-            log("[INFO] No previous distilledTE file found in output path. Proceeding normally.", 1, args.verbose)
+            log(f"[WARNING] Overwrite enabled. Deleting previous output in {args.out_path}", 1, args.verbose)
+            shutil.rmtree(args.out_path)
+            os.makedirs(args.out_path)
+    
+    # If the output directory does not exist, the script creates it.
     else:
         os.makedirs(args.out_path)
 
 
-#    if not os.path.exists(args.out_path):
-#        os.makedirs(args.out_path)
-#    else:
-#        log(f"[INFO] Output path {args.out_path} already exists. Continuing.", 1, args.verbose)
-#        if os.path.exists(f'{args.out_path}/distilledTE.flTE.iter0.fa'):
-#            #TODO: If there is a previous run, this part will stop the whole process.
-#            # Check if can we resume a previous run.
-#            log(f"[ERROR] Output path {args.out_path} already contains a distilledTE file. Continuing.", 0, args.verbose)
-#            return
-
-        
     fileSuffixes=[]
     if args.type == 'EarlGrey':
         fileSuffixes = ['EarlGrey.TEfamilies.fa', 'EarlGrey.RM.out', 'fna']
