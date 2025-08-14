@@ -385,18 +385,21 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
 
 def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, nproc=1,
                             offset=7, coverage=0.95, verbose=1, stat_file=None, max_iter=None):
+    iteration_path = os.path.join(out_path, "iterations")
+    os.makedirs(iteration_path, exist_ok=True)
+
     blast_output_dir = os.path.join(out_path, "blast_results")
     os.makedirs(blast_output_dir, exist_ok=True)
 
     # Find last iteration file
     iteration = 0
-    while os.path.exists(f"{out_path}/distilledTE.flTE.iter{iteration+1}.fa"):
+    while os.path.exists(f"{iteration_path}/distilledTE.flTE.iter{iteration+1}.fa"):
         iteration += 1
 
     if iteration == 0:
         # First run
         initial_input = f"{out_path}/pre_distilledTE.flTE.fa"
-        shutil.copy(initial_input, f"{out_path}/distilledTE.flTE.iter0.fa")
+        shutil.copy(initial_input, f"{iteration_path}/distilledTE.flTE.iter0.fa")
     else:
         log(f"[INFO] Resuming from iteration {iteration}", 1, verbose)
 
@@ -406,8 +409,8 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
     stat_list = manager.list() if stat_file else None
 
     while True:
-        fileiter = f'{out_path}/distilledTE.flTE.iter{iteration}.fa'
-        res_makeblastdb=subprocess.run(['makeblastdb', '-in', fileiter, '-dbtype', 'nucl'], check=True, text=True,stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        fileiter = f'{iteration_path}/distilledTE.flTE.iter{iteration}.fa'
+        res_makeblastdb = subprocess.run(['makeblastdb', '-in', fileiter, '-dbtype', 'nucl'], check=True, text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         log(f"[INFO] Created blastdb iteration {iteration}", 1, verbose)
         log(f"[TRACE] Created blastdb iteration {iteration}:\n {res_makeblastdb.stdout}", 3, verbose)
 
@@ -424,7 +427,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         with Pool(processes=nproc) as pool:
             results = pool.map(blast_wrapper, task_args)
 
-        outDistilled = f'{out_path}/distilledTE.flTE.iter{iteration+1}.fa'
+        outDistilled = f'{iteration_path}/distilledTE.flTE.iter{iteration+1}.fa'
         with open(outDistilled, "w") as o:
             for TE in keep_TEs:
                 newrecord = SeqRecord(Seq(keep_TEs[TE]), id=TE, description='')
@@ -439,7 +442,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
             break
 
         log(f"[INFO] Iteration {iteration} complete, {sum(results)} sequences changed", 1, verbose)
-        #TODO: Print a three column line, with data, iter and sum(results) and print into a file.
+        #DO: Print a three column line, with data, iter and sum(results) and print into a file.
         with open(os.path.join(out_path, "log_iterations.txt"), "a") as log_file:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             line = f"{now} | Iteration: {iteration} | Changed sequences: {sum(results)}\n"
@@ -448,7 +451,16 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         iteration += 1
         keep_TEs.clear()
         touched_TEs.clear()
-
+    
+    # Path to the file from the last iteration
+    final_iteration_file = f'{iteration_path}/distilledTE.flTE.iter{iteration}.fa'
+    # Destination path for the final file
+    final_output_path = f'{out_path}/distilledTE.flTE.fa'
+    
+    # Copy the final file to the main output directory
+    shutil.copy(final_iteration_file, final_output_path)
+    log(f"[INFO] Copied final result from {final_iteration_file} to {final_output_path}", 1, verbose)
+   
     if stat_file:
         with open(stat_file, "w") as f:
             for line in stat_list:
@@ -491,12 +503,12 @@ def main():
                 shutil.rmtree(args.out_path)
                 os.makedirs(args.out_path)
             elif args.resume:
-                log(f"[INFO] Resuming previous run from {first_iter_file}", 1, args.verbose)
+                log(f"[INFO] Resuming previous run from {file_first_iter}", 1, args.verbose)
             else:
                 log(f"[ERROR] Previous run detected in {args.out_path}. Use --resume to continue or --overwrite to start over.", 0, args.verbose)
                 return
         else:
-            log(f"[INFO] No previous distilledTE file found in output path. Proceeding normally.", 1, args.verbose)
+            log("[INFO] No previous distilledTE file found in output path. Proceeding normally.", 1, args.verbose)
     else:
         os.makedirs(args.out_path)
 
