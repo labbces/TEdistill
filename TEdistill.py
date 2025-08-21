@@ -16,15 +16,11 @@ def parse_arguments():
     #Configuring arguments
     parser = argparse.ArgumentParser(description='Generates a distilled TE file from genome-specific runs of TE annotation in several species')
 
-    parser.add_argument('-l', '--prefix_list', default='genome.list',
-                        help='Text file with a list of genome file prefixes. Default is "genome.list".')
-    parser.add_argument('--in_path', required=True,
-                        help='Path to folder with input files.')
-    parser.add_argument('--out_path', required=True,
-                        help='Output folder.')
+    parser.add_argument('-l', '--prefix_list', default='genome.list', help='Text file with a list of genome file prefixes. Default is "genome.list".')
+    parser.add_argument('--in_path', required=True, help='Path to folder with input files.')
+    parser.add_argument('--out_path', required=True, help='Output folder.')
     parser.add_argument('-c', '--fl_copy', default=3, type=int, help='Number of copies of the TE family in the genome. Default is 3.')
-    parser.add_argument('-s', '--strict', action='store_true', default=False,
-                        help='Use strict parameters for full length TE identification. Boolean. Default is False.')
+    parser.add_argument('-s', '--strict', action='store_true', default=False, help='Use strict parameters for full length TE identification. Boolean. Default is False.')
     parser.add_argument('-d', '--div', default=20, type=float, help='Maximum divergence allowed. Default is 20.')
     parser.add_argument('-i', '--ins', default=10, type=float, help='Maximum insertion allowed. Default is 10.')
     parser.add_argument('-e', '--dele', default=10, type=float, help='Maximum deletion allowed. Default is 10.')
@@ -40,6 +36,8 @@ def parse_arguments():
     parser.add_argument('--stat_file', default=None, type=str, help='Optional: path to save detailed stat log.')
     parser.add_argument('--type', default='EarlGrey', type=str, help='Optional: TE detection software, could be EarlGrey or EDTA, default is EarlGrey.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='Delete existing output and start a new run from scratch. Default is False.')
+    parser.add_argument('--sat_iters', type=int, default=15, help='Number of consecutive iterations required before the extra saturation stop condition is triggered. Default is 15.')
+    parser.add_argument('--sat_maxseq', type=int, default=5, help='Maximum number of sequences that may continue changing per iteration before triggering saturation. Default is 5.')
 
     return parser.parse_args()
 
@@ -383,7 +381,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
 
  
 def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, nproc=1,
-                            offset=7, coverage=0.95, verbose=1, stat_file=None, max_iter=None):
+                            offset=7, coverage=0.95, verbose=1, stat_file=None, max_iter=None, sat_iters=15, sat_maxseq=5):
     iteration_path = os.path.join(out_path, "iterations")
     os.makedirs(iteration_path, exist_ok=True)
 
@@ -406,6 +404,9 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
     keep_TEs = manager.dict()
     touched_TEs = manager.dict()
     stat_list = manager.list() if stat_file else None
+
+    # Track consecutive 'small-change' iterations for extra saturation:
+    consecutive_small_iters = 0
 
     while True:
         fileiter = f'{iteration_path}/distilledTE.flTE.iter{iteration}.fa'
@@ -432,19 +433,50 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
                 newrecord = SeqRecord(Seq(keep_TEs[TE]), id=TE, description='')
                 SeqIO.write(newrecord, o, "fasta")
 
+        # Write touched IDs for this iteration
+        touched_file = os.path.join(iteration_path, f"touchedTEs.iter{iteration+1}.txt")
+        with open(touched_file, "w") as tf:
+            for te_id in sorted(touched_TEs.keys()):
+                tf.write(f"{te_id}\n")
+        log(f"[INFO] Wrote touched IDs for iteration {iteration+1} to {touched_file}", 2, verbose)
+
+        # Count how many sequences changed in this iteration
+        count_changed = sum(1 for x in results if x)
+
         if not any(results):
             log(f"[INFO] Saturated: no further changes at iteration {iteration}", 1, verbose)
+            break
+
+        # Extra saturation conditions for iterations is considered active when both thresholds are positive. To disable, user can pass --sat_iters 0 (or --sat_maxseq 0).
+        extra_sat_active = (sat_iters is not None and sat_iters > 0) and (sat_maxseq is not None and sat_maxseq > 0)
+
+        if extra_sat_active:
+            # Update streak of "small-change" iterations (<= sat_maxseq)
+            if count_changed <= sat_maxseq:
+                consecutive_small_iters += 1
+                log(f"[DEBUG] Consecutive small change iteration {consecutive_small_iters}" f"(changed={count_changed} ≤ {sat_maxseq}) at iteration {iteration+1}", 2, verbose)
+            else:
+                consecutive_small_iters = 0
+
+        # Check for saturation conditions
+        if consecutive_small_iters >= sat_iters and count_changed <= sat_maxseq:
+            log(f"[INFO] Saturation conditions met at iteration {iteration+1}", 1, verbose)
+            with open(os.path.join(out_path, "log_iterations.txt"), "a") as log_file:
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                line = f"{now} | Iteration {iteration} | Changed sequences: {count_changed}\n | Reason: saturation_threshold\n"
+                log_file.write(line)
             break
 
         if max_iter is not None and iteration + 1 >= max_iter:
             log(f"[INFO] Max iterations ({max_iter}) reached", 1, verbose)
             break
 
-        log(f"[INFO] Iteration {iteration} complete, {sum(results)} sequences changed", 1, verbose)
-        #DO: Print a three column line, with data, iter and sum(results) and print into a file.
+        log(f"[INFO] Iteration {iteration} complete, {count_changed} sequences changed", 1, verbose)
+        
+        # Iteration information log
         with open(os.path.join(out_path, "log_iterations.txt"), "a") as log_file:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            line = f"{now} | Iteration: {iteration} | Changed sequences: {sum(results)}\n"
+            line = f"{now} | Iteration: {iteration} | Changed sequences: {count_changed}\n"
             log_file.write(line)
 
         iteration += 1
@@ -562,7 +594,9 @@ def main():
             coverage=args.cov,
             verbose=args.verbose,
             stat_file=args.stat_file,
-            max_iter=args.iter
+            max_iter=args.iter,
+            sat_iters=args.sat_iters,
+            sat_maxseq=args.sat_maxseq
     )
 
 if __name__ == '__main__':
