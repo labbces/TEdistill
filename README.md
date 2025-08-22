@@ -1,7 +1,8 @@
 # TEdistill: distill genome-specific TE annotations into a unified library.
+
 ## About TEdistill
 
-This is our script to generate a full-length transposable elements (TE) library across multiple genomes, based on genome-specific Earl Grey and EDTA TE libraries. It is an Python adaptation of [panEDTA.sh](https://github.com/oushujun/EDTA/blob/master/panEDTA.sh), from [EDTA](https://github.com/oushujun/EDTA/), and its Perl scripts.
+This script generates a non-redundant, full-length transposable element (TE) library across multiple genomes by integrating genome-specific TE libraries from Earl Grey and EDTA. It is inspired by [panEDTA.sh]((https://github.com/oushujun/EDTA/blob/master/panEDTA.sh) (part of [EDTA](https://github.com/oushujun/EDTA/), but reimplemented as a single, user-friendly script for easier use.
 
 ## Installing
 
