@@ -36,8 +36,8 @@ def parse_arguments():
     parser.add_argument('--stat_file', default=None, type=str, help='Optional: path to save detailed stat log.')
     parser.add_argument('--type', default='EarlGrey', type=str, help='Optional: TE detection software, could be EarlGrey or EDTA, default is EarlGrey.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='Delete existing output and start a new run from scratch. Default is False.')
-    parser.add_argument('--sat_iters', type=int, default=15, help='Number of consecutive iterations required before the extra saturation stop condition is triggered. Default is 15.')
-    parser.add_argument('--sat_maxseq', type=int, default=5, help='Maximum number of sequences that may continue changing per iteration before triggering saturation. Default is 5.')
+    parser.add_argument('--sat_iters', default=15, type=int, help='Number of consecutive iterations required before the extra saturation stop condition is triggered. Default is 15.')
+    parser.add_argument('--sat_maxseq', default=5, type=int, help='Maximum number of sequences that may continue changing per iteration before triggering saturation. Default is 5.')
 
     return parser.parse_args()
 
