@@ -49,7 +49,7 @@ def log (msg, level=1,  verbose=0):
     # 2 Debug  DEBUG    Extra info: file paths, filtered seqs
     # 3 Trace  TRACE    Fine-grained steps. per-TE messages, etc
     if verbose >= level:
-        print(msg)
+        print(msg, flush=True)
 
 def blast_wrapper(args):
     (sequence_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
@@ -292,11 +292,13 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         SeqIO.write(fasta_dict[sequence_id], temp_file, "fasta")
 
     output_blast_file = os.path.join(blast_output_dir, f"{sequence_id2}_blast_result_{iteration}.txt")
-
+    #TODO: currently we are bypassing the use of hte makeblastdb index, because of problem with our NFS, does not seem to impact speed, but must be better tested.
     blast_command = [
         'blastn',
         '-query', temp_fasta,
-        '-db', fileiter,
+#        '-db', fileiter, 
+        '-subject', fileiter, #bypassing the use of the index created by makeblastdb, due to problems with NFS 
+
         '-out', output_blast_file,
         '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send qlen slen',
         '-evalue', '1e-5',
@@ -305,14 +307,16 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
     ]
     log(f"[DEBUG] Running BLAST for {sequence_id} (iteration {iteration})", 2, verbose)
     
-    try:
-        subprocess.run(blast_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError as e:
-        log(f"[CRITICAL] BLAST failed for {sequence_id}: {e}", 0, verbose)
-        os.remove(temp_fasta)
-        return
-
+    res_blastn = subprocess.run(blast_command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if res_blastn.returncode != 0:
+        log(f"[CRITICAL] BLAST failed for {sequence_id}: {res_blastn.returncode}", 0, verbose)
+        log(f"[CRITICAL] BLAST failed for {sequence_id}: {res_blastn.stderr}", 0, verbose)
+        log(f"[CRITICAL] BLAST failed for {sequence_id}: {res_blastn.stdout}", 0, verbose)
+        raise SystemExit(
+                log(f"[FATAL] BLASTN failed for sequence {sequence_id} on iteration {iteration}",0 , verbose)
+        )
     os.remove(temp_fasta)
+    return
 
     hsps = {}
     iden_stats = {}
@@ -410,9 +414,45 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
 
     while True:
         fileiter = f'{iteration_path}/distilledTE.flTE.iter{iteration}.fa'
-        res_makeblastdb = subprocess.run(['makeblastdb', '-in', fileiter, '-dbtype', 'nucl'], check=True, text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        dbprefix = fileiter
+        res_makeblastdb=subprocess.run(
+                    [
+                        'makeblastdb', 
+                        '-in'    ,  fileiter, 
+                        '-dbtype', 'nucl',
+                        '-out'   ,  dbprefix
+                    ],
+                    text=True,
+                    stderr=subprocess.PIPE,
+                    stdout=subprocess.PIPE
+            )
+
+        if res_makeblastdb.returncode not in (0, 3):
+            log(f"[FATAL] MAKEBLASTDB failed for file {fileiter}: {res_makeblastdb.stdout}, with return code: {res_makeblastdb.returncode}", 0, verbose)
+            log(f"[FATAL] MAKEBLASTDB STDERR: {res_makeblastdb.stderr}", 0, verbose)
+            raise SystemExit(
+                log(f"[FATAL] MAKEBLASTDB failed for file {fileiter}",0 , verbose)
+            )
+
+#        val_blastdb = subprocess.run(['blastdbcmd', "-db", dbprefix, "-info"],
+#                                     text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#        if val_blastdb not in (0, 3):
+#            log(f"[FATAL] BLASTDBCMD on DB {dbprefix}: {val_blastdb.stdout}, with return code: {val_blastdb.returncode}", 0, verbose)
+#            raise SystemExit(f"[FATAL] blastdbcmd failed:\n{val_blastdb.stderr}")
+
+        # Checkin that blast index files are present and non-empty
+        idx = [dbprefix + ext for ext in (".nhr", ".nin", ".nsq")]
+        missing = [p for p in idx if not (os.path.exists(p) and os.path.getsize(p) > 0)]
+        if missing:
+            raise SystemExit("[FATAL] Missing/empty BLAST index files:\n  " + "\n  ".join(missing))
+
+#        if res_makeblastdb.returncode == 3 or val_blastdb.returncode == 3:
+        if res_makeblastdb.returncode == 3:
+            log(f"[WARN] makeblastdb/blastdbcmd of file {dbprefix} returned rc=3 (mmap warning) but DB validated by content.", 0, verbose)
+
+
         log(f"[INFO] Created blastdb iteration {iteration}", 1, verbose)
-        log(f"[TRACE] Created blastdb iteration {iteration}:\n {res_makeblastdb.stdout}", 3, verbose)
+#        log(f"[TRACE] Created blastdb iteration {iteration}:\n {res_makeblastdb.stdout}", 3, verbose)
 
         with open(fileiter, "r") as f:
             sequence_ids = [record.id for record in SeqIO.parse(f, "fasta")]
