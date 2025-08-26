@@ -38,6 +38,14 @@ def parse_arguments():
     parser.add_argument('--overwrite', action='store_true', default=False, help='Delete existing output and start a new run from scratch. Default is False.')
     parser.add_argument('--sat_iters', default=15, type=int, help='Number of consecutive iterations required before the extra saturation stop condition is triggered. Default is 15.')
     parser.add_argument('--sat_maxseq', default=5, type=int, help='Maximum number of sequences that may continue changing per iteration before triggering saturation. Default is 5.')
+    parser.add_argument('--mode_blastdb', choices=["subject", "db"], default='subject', help=(
+        'How to use the FASTA file in BLAST searches:\n'
+        '  - "subject": use the FASTA file directly with -subject (no indexing).\n'
+        '  - "db": format the FASTA with makeblastdb and search against the database.\n'
+        'Default: "subject".'
+        ),
+    )
+
 
     return parser.parse_args()
 
@@ -53,7 +61,7 @@ def log (msg, level=1,  verbose=0):
 
 def blast_wrapper(args):
     (sequence_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
-     minhsplen, minhspident, minlen, iteration, out_path, coverage, offset, stat_list, verbose) = args
+     minhsplen, minhspident, minlen, iteration, out_path, coverage, offset, stat_list, mode_blastdb, verbose) = args
 
     local_fasta_dict = SeqIO.to_dict(SeqIO.parse(fileiter, "fasta"))
 
@@ -72,6 +80,7 @@ def blast_wrapper(args):
         coverage=coverage,
         offset=offset,
         stat_list=stat_list,
+        mode_blastdb=mode_blastdb,
         verbose=verbose
     )
 
@@ -278,7 +287,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
 #Final file *flTE.fa
 
 def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen,
-              iteration, out_path, fileiter, coverage=0.95, offset=7, stat_list=None, verbose=1):
+              iteration, out_path, fileiter, coverage=0.95, offset=7, stat_list=None, mode_blastdb='subject', verbose=1):
     log(f"[DEBUG] Processing sequence {sequence_id} for iteration {iteration}", 2, verbose)
     
     if "#" in sequence_id:
@@ -292,13 +301,11 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         SeqIO.write(fasta_dict[sequence_id], temp_file, "fasta")
 
     output_blast_file = os.path.join(blast_output_dir, f"{sequence_id2}_blast_result_{iteration}.txt")
-    #TODO: currently we are bypassing the use of hte makeblastdb index, because of problem with our NFS, does not seem to impact speed, but must be better tested.
+    
     blast_command = [
         'blastn',
         '-query', temp_fasta,
-#        '-db', fileiter, 
-        '-subject', fileiter, #bypassing the use of the index created by makeblastdb, due to problems with NFS 
-
+        f"-{mode_blastdb}", fileiter, # mode_blastdb is either "subject" or "db"
         '-out', output_blast_file,
         '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send qlen slen',
         '-evalue', '1e-5',
@@ -385,7 +392,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
 
  
 def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, nproc=1,
-                            offset=7, coverage=0.95, verbose=1, stat_file=None, max_iter=None, sat_iters=15, sat_maxseq=5):
+                            offset=7, coverage=0.95, verbose=1, stat_file=None, max_iter=None, sat_iters=15, sat_maxseq=5,mode_blastdb='subject'):
     iteration_path = os.path.join(out_path, "iterations")
     os.makedirs(iteration_path, exist_ok=True)
 
@@ -415,44 +422,39 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
     while True:
         fileiter = f'{iteration_path}/distilledTE.flTE.iter{iteration}.fa'
         dbprefix = fileiter
-        res_makeblastdb=subprocess.run(
-                    [
-                        'makeblastdb', 
-                        '-in'    ,  fileiter, 
-                        '-dbtype', 'nucl',
-                        '-out'   ,  dbprefix
-                    ],
-                    text=True,
-                    stderr=subprocess.PIPE,
-                    stdout=subprocess.PIPE
-            )
+        if mode_blastdb == 'db':
+            res_makeblastdb=subprocess.run(
+                     [
+                         'makeblastdb', 
+                         '-in'    ,  fileiter, 
+                         '-dbtype', 'nucl',
+                         '-out'   ,  dbprefix
+                     ],
+                     text=True,
+                     stderr=subprocess.PIPE,
+                     stdout=subprocess.PIPE
+             )
+    
+            if res_makeblastdb.returncode not in (0, 3):
+                log(f"[FATAL] MAKEBLASTDB failed for file {fileiter}: {res_makeblastdb.stdout}, with return code: {res_makeblastdb.returncode}", 0, verbose)
+                log(f"[FATAL] MAKEBLASTDB STDERR: {res_makeblastdb.stderr}", 0, verbose)
+                raise SystemExit(
+                    log(f"[FATAL] MAKEBLASTDB failed for file {fileiter}",0 , verbose)
+                )
 
-        if res_makeblastdb.returncode not in (0, 3):
-            log(f"[FATAL] MAKEBLASTDB failed for file {fileiter}: {res_makeblastdb.stdout}, with return code: {res_makeblastdb.returncode}", 0, verbose)
-            log(f"[FATAL] MAKEBLASTDB STDERR: {res_makeblastdb.stderr}", 0, verbose)
-            raise SystemExit(
-                log(f"[FATAL] MAKEBLASTDB failed for file {fileiter}",0 , verbose)
-            )
+            # Checkin that blast index files are present and non-empty
+            idx = [dbprefix + ext for ext in (".nhr", ".nin", ".nsq")]
+            missing = [p for p in idx if not (os.path.exists(p) and os.path.getsize(p) > 0)]
+            if missing:
+                raise SystemExit("[FATAL] Missing/empty BLAST index files:\n  " + "\n  ".join(missing))
 
-#        val_blastdb = subprocess.run(['blastdbcmd', "-db", dbprefix, "-info"],
-#                                     text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#        if val_blastdb not in (0, 3):
-#            log(f"[FATAL] BLASTDBCMD on DB {dbprefix}: {val_blastdb.stdout}, with return code: {val_blastdb.returncode}", 0, verbose)
-#            raise SystemExit(f"[FATAL] blastdbcmd failed:\n{val_blastdb.stderr}")
-
-        # Checkin that blast index files are present and non-empty
-        idx = [dbprefix + ext for ext in (".nhr", ".nin", ".nsq")]
-        missing = [p for p in idx if not (os.path.exists(p) and os.path.getsize(p) > 0)]
-        if missing:
-            raise SystemExit("[FATAL] Missing/empty BLAST index files:\n  " + "\n  ".join(missing))
-
-#        if res_makeblastdb.returncode == 3 or val_blastdb.returncode == 3:
-        if res_makeblastdb.returncode == 3:
-            log(f"[WARN] makeblastdb/blastdbcmd of file {dbprefix} returned rc=3 (mmap warning) but DB validated by content.", 0, verbose)
+#            if res_makeblastdb.returncode == 3 or val_blastdb.returncode == 3:
+            if res_makeblastdb.returncode == 3:
+                log(f"[WARN] makeblastdb/blastdbcmd of file {dbprefix} returned rc=3 (mmap warning) but DB validated by content.", 0, verbose)
 
 
-        log(f"[INFO] Created blastdb iteration {iteration}", 1, verbose)
-#        log(f"[TRACE] Created blastdb iteration {iteration}:\n {res_makeblastdb.stdout}", 3, verbose)
+            log(f"[INFO] Created blastdb iteration {iteration}", 1, verbose)
+#            log(f"[TRACE] Created blastdb iteration {iteration}:\n {res_makeblastdb.stdout}", 3, verbose)
 
         with open(fileiter, "r") as f:
             sequence_ids = [record.id for record in SeqIO.parse(f, "fasta")]
@@ -460,7 +462,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         task_args = [
             (seq_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
              minhsplen, minhspident, minlen, iteration, out_path,
-             coverage, offset, stat_list, verbose)
+             coverage, offset, stat_list, mode_blastdb, verbose)
             for seq_id in sequence_ids
         ]
 
@@ -636,7 +638,8 @@ def main():
             stat_file=args.stat_file,
             max_iter=args.iter,
             sat_iters=args.sat_iters,
-            sat_maxseq=args.sat_maxseq
+            sat_maxseq=args.sat_maxseq,
+            mode_blastdb=args.mode_blastdb
     )
 
 if __name__ == '__main__':
