@@ -14,7 +14,15 @@ from datetime import datetime
 #TODO: Example run
 def parse_arguments():
     #Configuring arguments
-    parser = argparse.ArgumentParser(description='Generates a distilled TE file from genome-specific runs of TE annotation in several species')
+    parser = argparse.ArgumentParser(
+                    prog='TEdistill',
+                    description='Generates a distilled TE file from genome-specific runs of TE annotation in several species',
+                    epilog="""\
+License:
+  Distributed under the GNU General Public License v3.0 (GPL-3.0).
+  See <https://www.gnu.org/licenses/gpl-3.0.html> for more details.
+"""
+    )
 
     parser.add_argument('-l', '--prefix_list', default='genome.list', help='Text file with a list of genome file prefixes. Default is "genome.list".')
     parser.add_argument('--in_path', required=True, help='Path to folder with input files.')
