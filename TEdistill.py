@@ -579,8 +579,7 @@ def main():
         # If the --overwrite option was not used, the script stops.
         if not args.overwrite:
             log(f"[ERROR] Output path {args.out_path} already exists. Use --overwrite to proceed.", 0, args.verbose)
-            return
-            
+            exit(1)
         # If --overwrite was used, the script deletes the directory and starts over.
         else:
             log(f"[WARNING] Overwrite enabled. Deleting previous output in {args.out_path}", 1, args.verbose)
