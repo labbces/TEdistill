@@ -44,8 +44,8 @@ License:
     parser.add_argument('--stat_file', default=None, type=str, help='Optional: path to save detailed stat log.')
     parser.add_argument('--type', default='EarlGrey', type=str, help='Optional: TE detection software, could be EarlGrey or EDTA, default is EarlGrey.')
     parser.add_argument('--overwrite', action='store_true', default=False, help='Delete existing output and start a new run from scratch. Default is False.')
-    parser.add_argument('--sat_iters', default=15, type=int, help='Number of consecutive iterations required before the extra saturation stop condition is triggered. Default is 15.')
-    parser.add_argument('--sat_maxseq', default=5, type=int, help='Maximum number of sequences that may continue changing per iteration before triggering saturation. Default is 5.')
+    parser.add_argument('--sat_iters', default=0, type=int, help='Number of consecutive iterations required before the extra saturation stop condition is triggered. Default is 0.')
+    parser.add_argument('--sat_maxseq', default=0, type=int, help='Maximum number of sequences that may continue changing per iteration before triggering saturation. Default is 0.')
     parser.add_argument('--mode_blastdb', choices=["subject", "db"], default='subject', help=(
         'How to use the FASTA file in BLAST searches:\n'
         '  - "subject": use the FASTA file directly with -subject (no indexing).\n'
@@ -297,7 +297,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
 def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen,
               iteration, out_path, fileiter, coverage=0.95, offset=7, stat_list=None, mode_blastdb='subject', verbose=1):
     log(f"[DEBUG] Processing sequence {sequence_id} for iteration {iteration}", 2, verbose)
-    
+
     if "#" in sequence_id:
         sequence_id2 = sequence_id.split("#")[0]
     else:
@@ -508,14 +508,14 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
             else:
                 consecutive_small_iters = 0
 
-        # Check for saturation conditions
-        if consecutive_small_iters >= sat_iters and count_changed <= sat_maxseq:
-            log(f"[INFO] Saturation conditions met at iteration {iteration+1}", 1, verbose)
-            with open(os.path.join(out_path, "log_iterations.txt"), "a") as log_file:
-                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                line = f"{now} | Iteration {iteration} | Changed sequences: {count_changed}\n | Reason: saturation_threshold\n"
-                log_file.write(line)
-            break
+	    # Check for saturation conditions
+            if consecutive_small_iters >= sat_iters and count_changed <= sat_maxseq:
+                log(f"[INFO] Saturation conditions met at iteration {iteration+1}", 1, verbose)
+                with open(os.path.join(out_path, "log_iterations.txt"), "a") as log_file:
+                    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    line = f"{now} | Iteration {iteration} | Changed sequences: {count_changed}\n | Reason: saturation_threshold\n"
+                    log_file.write(line)
+                break
 
         if max_iter is not None and iteration + 1 >= max_iter:
             log(f"[INFO] Max iterations ({max_iter}) reached", 1, verbose)
