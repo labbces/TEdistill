@@ -331,7 +331,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
                 log(f"[FATAL] BLASTN failed for sequence {sequence_id} on iteration {iteration}",0 , verbose)
         )
     os.remove(temp_fasta)
-    return
+    #return
 
     hsps = {}
     iden_stats = {}
