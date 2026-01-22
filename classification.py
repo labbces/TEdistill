@@ -108,13 +108,39 @@ def parse_DeepTE_files(files,sequence_ontology):
 
 def parse_TESorter_files(files,sequence_ontology):
     """Extract identifiers and classification from TEsorter files (TSV)."""
-    True
+    # TODO: Check if Domain row is relevant to classification, like in DeepTE.
+    print(f"Parsing TEsorter files...{files[0]}")
+    data = {}
+    df = pd.read_csv(files[0], sep='\t', compression='gzip')
+    for _, row in df.iterrows():
+        id_te = row['#TE'].split('#')[0]
+        classification = f"{row['Order']}/{row['Superfamily']}/{row['Clade']}"
+        if classification not in sequence_ontology:
+            print(f"Warning: Classification {classification} for TE {id_te} not found in sequence ontology.")
+        data[id_te] = classification
+    return data
+
     # datos = {}
     # df = pd.read_csv(archivo, sep='\t')
     # for _, row in df.iterrows():
     #     id_te, clasificacion = row['#TE'].split('#')[0], '/'.join(map(str, row[1:4]))
     #     datos[id_te] = clasificacion
     # return datos
+
+def parse_Terrier_files(files,sequence_ontology):
+    """Extract identifiers and classification from Terrier files (FASTA)."""
+    print(f"Parsing Terrier files...{files[0]}")
+    data = {}
+    with gzip.open(files[0], 'rt') as f:
+            for line in f:
+                if line.startswith('>'):
+                    parts = line.strip().split('#')
+                    id_te = parts[0]
+                    classification = parts[1]
+                    if classification not in sequence_ontology:
+                        print(f"Warning: Classification {classification} for TE {id_te} not found in sequence ontology.")
+                    data[id_te] = classification
+    return data
 
 def create_tables(species, folder_f, folder_d, folder_t, folder_output):
     """Create comparative tables by species."""
@@ -123,14 +149,17 @@ def create_tables(species, folder_f, folder_d, folder_t, folder_output):
         file_f = glob(os.path.join(folder_f, f"*{specie}*.flTE.fa"))[0]
         file_d = glob(os.path.join(folder_d, f"*{specie}*_opt_DeepTE.fasta"))[0]
         file_t = glob(os.path.join(folder_t, f"*{specie}*.cls.tsv"))[0]
+        file_r = glob(os.path.join(folder_r, f"*{specie}*_terrier_OUTPUT.fa"))[0]
 
         data_f = extract_data_earlgrey(file_f)
         data_d = extract_data_deepte(file_d)
         data_t = extract_data_tesorter(file_t)
+        data_r = extract_data_terrier(file_r)
 
         comparative = pd.DataFrame(data_f.items(), columns=['ID', 'EarlGrey'])
         comparative['DeepTE'] = comparative['ID'].map(data_d).fillna('Unknown')
         comparative['TEsorter'] = comparative['ID'].map(data_t).fillna('Unknown')
+        comparative['Terrier'] = comparative['ID'].map(data_r).fillna('Unknown')
 
         comparative.to_csv(os.path.join(folder_output, f"{specie}_comparative.csv"), index=False)
         print(f"Table created for {specie} in {folder_output}")
