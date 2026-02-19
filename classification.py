@@ -18,6 +18,13 @@ def parse_seqontology(file):
                 term_id = parts[1]
                 term_name = parts[0]
                 aliases= parts[2].split(',') if len(parts) > 2 else []
+
+                # Register the official term name to ensure robust mapping across tools (AI suggestion)
+                #seq_ontology[term_name] = {
+                #    "name": term_name,
+                #    "id": term_id
+                #}
+
                 for alias in aliases:
                     seq_ontology[alias] = {
                         "name": term_name,
@@ -36,6 +43,7 @@ def check_files(directory):
     files_aux_deepte = glob(os.path.join(directory, "*_domain_pattern.txt.gz"))
     files_tesorter = glob(os.path.join(directory, "*cls.tsv.gz"))
     files_terrier = glob(os.path.join(directory, "*_OUTPUT.fa.gz"))
+    files_repclassifier = glob(os.path.join(directory, "*.fa.classified.gz"))
     #TODO check that files are properly check if on disk
     if not files_TEdistill or len(files_TEdistill) == 0:
         raise FileNotFoundError("No TEdistill files found in the specified directory.")
@@ -45,6 +53,8 @@ def check_files(directory):
         raise FileNotFoundError("No TEsorter files found in the specified directory.")
     if not files_terrier or len(files_terrier) ==0:
         raise FileNotFoundError("No Terrier files found in the specified directory.")
+    if not files_repclassifier or len(files_repclassifier) == 0:
+        raise FileNotFoundError("No RepeatClassifier files found in the specified directory.")
 
     # Produce a dictionary with classification tool name as external key and as values a list of the associated files
     input_files = {
@@ -52,7 +62,8 @@ def check_files(directory):
         'Tools': {
             "DeepTE": files_deepte + files_aux_deepte,
             "TEsorter": files_tesorter,
-            "Terrier": files_terrier
+            "Terrier": files_terrier,
+            "RepeatClassifier": files_repclassifier
         }
     }
 
@@ -64,49 +75,53 @@ def parse_classification_files(tool_files, sequence_ontology):
     classifications={}
     for tool in tool_files:
         if tool == "DeepTE":
-            parsed=parse_DeepTE_files(tool_files[tool],sequence_ontology)
+            parsed=parse_deepte_files(tool_files[tool],sequence_ontology)
         elif tool == "TEsorter":
-            parsed=parse_TESorter_files(tool_files[tool],sequence_ontology)
+            parsed=parse_tesorter_files(tool_files[tool],sequence_ontology)
         elif tool == "Terrier":
-            parsed=parse_Terrier_files(tool_files[tool],sequence_ontology)
-
+            parsed=parse_terrier_files(tool_files[tool],sequence_ontology)
+        elif tool == "RepeatClassifier":
+            parsed=parse_repeatclassifier_files(tool_files[tool],sequence_ontology)
         classifications[tool]=parsed
     return classifications
 
-def extract_earlgrey_data(archive):
-    """Extract identifiers and classification from Earl Grey files (FASTA)."""
+def parse_repeatclassifier_files(file,sequence_ontology):
+    """Extract identifiers and classification from RepeatClassifier files (FASTA)."""
+    print(f'Parsing RepeatClassifier files...{file}')
     data = {}
-    with open(archive, 'r') as f:
+    with gzip.open(file, 'rt') as f:
         for line in f:
             if line.startswith('>'):
                 parts = line.strip().split('#')
+                # Remove ">" from the identifier
                 id_te = parts[0][1:]
                 order_superfam = parts[1] if len(parts) > 1 else 'Unknown'
-                data['DeepTE'][id_te] = order_superfam
+                if order_superfam not in sequence_ontology:
+                    print(f"Warning: Classification {order_superfam} for TE {id_te} not found in sequence ontology.")
+                data[id_te] = order_superfam
     return data
 
-def parse_DeepTE_files(files,sequence_ontology):
+def parse_deepte_files(files,sequence_ontology):
     """Extract identifiers and classification from DeepTE files (FASTA.gz) and domain_pattern.txt.gz"""
-    """ For DeepTE we have two files htat are coming as items of a list, the first item is the fasta file and the second item is the domain_pattern.txt file."""
+    """ For DeepTE we have two files that are coming as items of a list, the first item is the fasta file and the second item is the domain_pattern.txt file."""
     # TODO: Add the auxility file with domain patterns to improve classification.
     print(f"Parsing DeepTE files...{files[0]} and {files[1]}")
     data = {}
     with gzip.open(files[0], 'rt') as f:
         for line in f:
             if line.startswith('>'):
-                parts = line.strip().split('__')
-                id_te = parts[0]
+                # Remove ">" from the identifier and split by "__" to separate the ID and classification
+                header = line.strip()[1:]
+                parts = header.split('__')
                 classification = parts[1]
+                id_te = parts[0].split('#')[0]
                 # print(f"Processing TE {id_te} with classification {classification}")
-                if classification in sequence_ontology:
-                    True
-                else:
+                if classification not in sequence_ontology:
                     print(f"Warning: Classification {classification} for TE {id_te} not found in sequence ontology.")
-
                 data[id_te] = classification
     return data
 
-def parse_TESorter_files(files,sequence_ontology):
+def parse_tesorter_files(files,sequence_ontology):
     """Extract identifiers and classification from TEsorter files (TSV)."""
     # TODO: Check if Domain row is relevant to classification, like in DeepTE.
     print(f"Parsing TEsorter files...{files[0]}")
@@ -127,39 +142,48 @@ def parse_TESorter_files(files,sequence_ontology):
     #     datos[id_te] = clasificacion
     # return datos
 
-def parse_Terrier_files(files,sequence_ontology):
+def parse_terrier_files(files,sequence_ontology):
     """Extract identifiers and classification from Terrier files (FASTA)."""
     print(f"Parsing Terrier files...{files[0]}")
     data = {}
     with gzip.open(files[0], 'rt') as f:
             for line in f:
                 if line.startswith('>'):
-                    parts = line.strip().split('#')
+                    # Remove ">" from the identifier and split by "#" to separate the ID and classification
+                    header = line.strip()[1:]
+                    parts = header.split('#')
                     id_te = parts[0]
-                    classification = parts[1]
+                    classification = parts[1].split('(')[0].strip()
                     if classification not in sequence_ontology:
                         print(f"Warning: Classification {classification} for TE {id_te} not found in sequence ontology.")
                     data[id_te] = classification
     return data
 
-def create_tables(species, folder_f, folder_d, folder_t, folder_output):
+def create_tables(species, folder_c, folder_d, folder_t, folder_r, folder_output, sequence_ontology):
     """Create comparative tables by species."""
     os.makedirs(folder_output, exist_ok=True)
     for specie in species:
-        file_f = glob(os.path.join(folder_f, f"*{specie}*.flTE.fa"))[0]
-        file_d = glob(os.path.join(folder_d, f"*{specie}*_opt_DeepTE.fasta"))[0]
-        file_t = glob(os.path.join(folder_t, f"*{specie}*.cls.tsv"))[0]
-        file_r = glob(os.path.join(folder_r, f"*{specie}*_terrier_OUTPUT.fa"))[0]
+        file_c = glob(os.path.join(folder_c, f"*{specie}*.fa.classified.gz"))[0]
+        file_d = glob(os.path.join(folder_d, f"*{specie}*_opt_DeepTE.fasta.gz"))[0]
+        file_t = glob(os.path.join(folder_t, f"*{specie}*.cls.tsv.gz"))[0]
+        file_r = glob(os.path.join(folder_r, f"*{specie}*_terrier_OUTPUT.fa.gz"))[0]
 
-        data_f = extract_data_earlgrey(file_f)
-        data_d = extract_data_deepte(file_d)
-        data_t = extract_data_tesorter(file_t)
-        data_r = extract_data_terrier(file_r)
+        data_c = parse_repeatclassifier_files(file_c, sequence_ontology)
+        data_d = parse_deepte_files(file_d, sequence_ontology)
+        data_t = parse_tesorter_files(file_t, sequence_ontology)
+        data_r = parse_terrier_files(file_r, sequence_ontology)
 
-        comparative = pd.DataFrame(data_f.items(), columns=['ID', 'EarlGrey'])
+        comparative = pd.DataFrame(data_c.items(), columns=['ID', 'RepeatClassifier'])
         comparative['DeepTE'] = comparative['ID'].map(data_d).fillna('Unknown')
         comparative['TEsorter'] = comparative['ID'].map(data_t).fillna('Unknown')
         comparative['Terrier'] = comparative['ID'].map(data_r).fillna('Unknown')
+
+        # Add Sequence Ontology ID column
+        for tool in ['RepeatClassifier', 'DeepTE', 'TEsorter', 'Terrier']:
+            comparative[f'{tool}_SO'] = comparative[tool].apply(
+                lambda x: sequence_ontology[x]["id"] if x in sequence_ontology else "Not found in SO"
+                #lambda x: sequence_ontology[x]["id"] if x in sequence_ontology else "NA"
+            )
 
         comparative.to_csv(os.path.join(folder_output, f"{specie}_comparative.csv"), index=False)
         print(f"Table created for {specie} in {folder_output}")
@@ -173,19 +197,25 @@ def join_tables(species, folder_output):
     print(f"Table all_species_combined.csv successfully created in {folder_output}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Process Earl Grey, DeepTE and TEsorter files to create comparative tables.")
+    parser = argparse.ArgumentParser(
+        description="Process classification files (RepeatClassifier, DeepTE, TEsorter, Terrier) to create comparative tables."
+    )
     parser.add_argument("-d", required=True, help="Directory with input files")
     parser.add_argument("-o", required=True, help="Directory for results")
     args = parser.parse_args()
 
     sequence_ontology= parse_seqontology('seq_ontology.txt')
-    input_files = check_files(args.d)
+    input_files = check_files(args.d)    
     parse_classification_files(input_files['Tools'],sequence_ontology)
 
     print("All files are complete. Proceeding with the analysis...")
-    # crear_tablas(especies, args.f, args.d, args.t, args.o)
-    # combinar_tablas(especies, args.o)
-    print("Untill next time (^^)/")
+    # TODO: Manually define the species list based on the input files, or implement a more dynamic way to extract species names from the file names.
+    # species = ['species1', 'species2', 'species3']
+    # create_tables(
+    # species, input_files['Tools']['RepeatClassifier'], input_files['Tools']['DeepTE'], input_files['Tools']['TEsorter'], input_files['Tools']['Terrier'], args.o, sequence_ontology
+    # )
+    # join_tables(species, args.o)
+    print("Pipeline completed successfully. Untill next time (^^)/")
 
 if __name__ == "__main__":
     main()
