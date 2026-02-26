@@ -1,3 +1,5 @@
+#TODO: use the TE sequence to calculate it's size and then choose the full lenght TE
+
 import argparse
 import os
 import re
