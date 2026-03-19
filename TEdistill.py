@@ -196,6 +196,10 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
         filePath = f'{in_path}/{genomeFilePrefix}.{programtype}.RM.out'
         teSequenceFile = f'{in_path}/{genomeFilePrefix}.{programtype}.TEfamilies.fa'
         log(f"[INFO] Processing file: {filePath}", 1, verbose)
+
+        #Indexing TE families fasta
+        TE_fasta = SeqIO.index(teSequenceFile, "fasta")
+        
         with open(filePath, 'r') as f:
             #Loop over the input lines.
             for line in f:
@@ -243,9 +247,9 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                     if div == 0 and ins == 0 and del_ == 0:
                         if TEs == 1 and TEleft == 0:
                             full_len, length = 0, 0
-                            full_len = TEe + TEleft
+                            full_len = len(TE_fasta[TEidClassFam].seq)
                             length = TEe - TEs + 1
-                            if length / (full_len + 1) >= min_cov:
+                            if length / (full_len) >= min_cov:
                                 log(f"[TRACE] STRICT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 3, verbose)
                                 if TEidClassFam in count_TE_identifiers.keys():
                                     count_TE_identifiers[TEidClassFam]+=1
@@ -260,18 +264,15 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                         log(f"[TRACE] LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 3, verbose)
                         full_len, length = 0, 0
                         #Calculate full length and actual length for strand "+".
-                        full_len = TEe + TEleft
+                        full_len = len(TE_fasta[TEidClassFam].seq)
                         length = TEe - TEs + 1
                         #Ensure the length/full_length ratio is above the minimum coverage.
-                        if length / (full_len + 1) >= min_cov:
+                        if length / (full_len) >= min_cov:
                             if TEidClassFam in count_TE_identifiers.keys():
                                 count_TE_identifiers[TEidClassFam]+=1
                             else:
                                 count_TE_identifiers[TEidClassFam]=1
         log(f"[INFO] Writing full length TEs that appear more than {fl_copy} times in the genome. Outfiles: {out_flTE} and {outfa_flTE}", 1, verbose)
-
-        #Indexing TE families fasta
-        TE_fasta = SeqIO.index(teSequenceFile, "fasta")
 
         #print(list(TE_fasta.keys()))
         #print(list(TE_fastteSequenceFile))
