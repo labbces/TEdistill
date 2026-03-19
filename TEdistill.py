@@ -490,7 +490,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         touched_file = os.path.join(iteration_path, f"touchedTEs.iter{iteration+1}.txt")
         with open(touched_file, "w") as tf:
             for te_id in sorted(touched_TEs.keys()):
-				count_changed += 1
+                count_changed += 1
                 tf.write(f"{te_id}\n")
         log(f"[INFO] Wrote touched IDs for iteration {iteration+1} to {touched_file}", 2, verbose)
 
