@@ -494,7 +494,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         outDistilled = f'{iteration_path}/distilledTE.flTE.iter{iteration+1}.fa'
         with open(outDistilled, "w") as o:
             for TE in keep_TEs:
-                seqstr = trim_terminal_ns(Seq(keep_TEs[TE]) # Making sure no terminal Ns are present
+                seqstr = trim_terminal_ns(Seq(keep_TEs[TE])) # Making sure no terminal Ns are present
                 newrecord = SeqRecord(Seq(seqstr), id=TE, description='')
                 SeqIO.write(newrecord, o, "fasta")
 
