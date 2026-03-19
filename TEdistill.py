@@ -59,6 +59,14 @@ License:
 
     return parser.parse_args()
 
+def trim_terminal_ns(seq):
+    """
+    Return sequence without leading/trailing N/n.
+    Internal Ns are preserved.
+    Assumes sequence is in uppercase
+    """
+    return str(seq).strip("N")
+    
 def log (msg, level=1,  verbose=0):
     #Default verbose level is 1 (normal)
     #Verbose levels should be one of:
@@ -159,6 +167,7 @@ def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
             record.id = new_id
             record.name = new_id
             record.description = new_id  #Clean any additional description
+            record.seq = Seq(trim_terminal_ns(str(record.seq).upper()))
             
             SeqIO.write(record, out_handle, "fasta")
     
@@ -380,6 +389,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
             for start, end in merged_hsps:
                 subjectseq[start:end+1] = ['R'] * ((end - start) + 1)
             subjectseq_str = ''.join(subjectseq).replace('R', '')
+            subjectseq_str = trim_terminal_ns(subjectseq_str)
             log(f"[TRACE] Changing subject Query {sequence_id} Subject {subject}, {len(hsps[subject])} HSPs → {len(merged_hsps)} merged (offset={offset}): qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}, merged_count={merged_count}", 3, verbose)
 
             if len(subjectseq_str) >= minlen and len(subjectseq_str) < slen:
@@ -484,7 +494,8 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         outDistilled = f'{iteration_path}/distilledTE.flTE.iter{iteration+1}.fa'
         with open(outDistilled, "w") as o:
             for TE in keep_TEs:
-                newrecord = SeqRecord(Seq(keep_TEs[TE]), id=TE, description='')
+                seqstr = trim_terminal_ns(Seq(keep_TEs[TE]) # Making sure no terminal Ns are present
+                newrecord = SeqRecord(Seq(seqstr), id=TE, description='')
                 SeqIO.write(newrecord, o, "fasta")
 
         # Write touched IDs for this iteration
