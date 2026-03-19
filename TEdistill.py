@@ -367,6 +367,10 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
 
     changed = False
     for subject in hsps.keys():
+        if subject == sequence_id:
+            #avoid sefl comparisons
+            continue
+        
         merged_hsps, merged_count = merge_hsps(hsps[subject], offset=offset)
         length_hsp_merged = sum(end - start + 1 for start, end in merged_hsps)
 
