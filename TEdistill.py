@@ -256,7 +256,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                 else:
                     #If not stringent, apply the divergence, insertion, and deletion limits.
                     if div <= max_div and ins <= max_ins and del_ <= max_del:
-                        if TEe < 0 or TEs < 0
+                        if TEe < 0 or TEs < 0:
                             log(f"[TRACE] Invalid consensus coordinates: TEs={TEs}, TEe={TEe}, TEleft={TEleft} for TE {id_} in {genomeFilePrefix}. Skipping.", 3, verbose)
                             continue
                         log(f"[TRACE2] LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 4, verbose)
