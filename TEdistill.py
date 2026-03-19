@@ -72,6 +72,7 @@ def log (msg, level=1,  verbose=0):
     # 1 Normal INFO     Key steps, progress messages
     # 2 Debug  DEBUG    Extra info: file paths, filtered seqs
     # 3 Trace  TRACE    Fine-grained steps. per-TE messages, etc
+	# 4 Trace2 TRACE2   More fine-grained steps
     if verbose >= level:
         print(msg, flush=True)
 
@@ -248,7 +249,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                             full_len = len(TE_fasta[TEidClassFam].seq)
                             length = TEe - TEs + 1
                             if length / (full_len) >= min_cov:
-                                log(f"[TRACE] STRICT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 3, verbose)
+                                log(f"[TRACE2] STRICT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 4, verbose)
                                 if TEidClassFam in count_TE_identifiers.keys():
                                     count_TE_identifiers[TEidClassFam]+=1
                                 else:
@@ -259,7 +260,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                         if TEe < 0 or TEs < 0 or TEleft < 0:
                             log(f"[TRACE] Invalid consensus coordinates: TEs={TEs}, TEe={TEe}, TEleft={TEleft} for TE {id_} in {genomeFilePrefix}. Skipping.", 3, verbose)
                             continue
-                        log(f"[TRACE] LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 3, verbose)
+                        log(f"[TRACE2] LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 4, verbose)
                         full_len, length = 0, 0
                         #Calculate full length and actual length for strand "+".
                         full_len = len(TE_fasta[TEidClassFam].seq)
