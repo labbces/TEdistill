@@ -424,7 +424,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
     manager = Manager()
     keep_TEs = manager.dict()
     touched_TEs = manager.dict()
-	count_changed = 0
+    count_changed = 0
     stat_list = manager.list() if stat_file else None
 
     # Track consecutive 'small-change' iterations for extra saturation:
