@@ -380,7 +380,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
             for start, end in merged_hsps:
                 subjectseq[start:end+1] = ['R'] * ((end - start) + 1)
             subjectseq_str = ''.join(subjectseq).replace('R', '')
-			log(f"[TRACE] Changing subject Query {sequence_id} Subject {subject}, {len(hsps[subject])} HSPs → {len(merged_hsps)} merged (offset={offset}): qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}, merged_count={merged_count}", 3, verbose)
+            log(f"[TRACE] Changing subject Query {sequence_id} Subject {subject}, {len(hsps[subject])} HSPs → {len(merged_hsps)} merged (offset={offset}): qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}, merged_count={merged_count}", 3, verbose)
 
             if len(subjectseq_str) >= minlen and len(subjectseq_str) < slen:
                 keep_TEs[subject] = subjectseq_str
