@@ -424,6 +424,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
     manager = Manager()
     keep_TEs = manager.dict()
     touched_TEs = manager.dict()
+	count_changed = 0
     stat_list = manager.list() if stat_file else None
 
     # Track consecutive 'small-change' iterations for extra saturation:
@@ -489,11 +490,12 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         touched_file = os.path.join(iteration_path, f"touchedTEs.iter{iteration+1}.txt")
         with open(touched_file, "w") as tf:
             for te_id in sorted(touched_TEs.keys()):
+				count_changed += 1
                 tf.write(f"{te_id}\n")
         log(f"[INFO] Wrote touched IDs for iteration {iteration+1} to {touched_file}", 2, verbose)
 
-        # Count how many sequences changed in this iteration
-        count_changed = sum(1 for x in results if x)
+        # REMOVE Count how many sequences changed in this iteration
+        # REMOVE count_changed = sum(1 for x in results if x)
 
         if not any(results):
             log(f"[INFO] Saturated: no further changes at iteration {iteration}", 1, verbose)
