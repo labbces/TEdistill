@@ -244,20 +244,19 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                 if strict == 1:
                     #If stringent, only allow if divergence, insertion, and deletion are all zero.
                     if div == 0 and ins == 0 and del_ == 0:
-                        if TEs == 1 and TEleft == 0:
-                            full_len, length = 0, 0
-                            full_len = len(TE_fasta[TEidClassFam].seq)
-                            length = TEe - TEs + 1
-                            if length / (full_len) >= min_cov:
-                                log(f"[TRACE2] STRICT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 4, verbose)
-                                if TEidClassFam in count_TE_identifiers.keys():
-                                    count_TE_identifiers[TEidClassFam]+=1
-                                else:
-                                    count_TE_identifiers[TEidClassFam]=1
+                        full_len, length = 0, 0
+                        full_len = len(TE_fasta[TEidClassFam].seq)
+                        length = TEe - TEs + 1
+                        if length / (full_len) >= min_cov:
+                            log(f"[TRACE2] STRICT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 4, verbose)
+                            if TEidClassFam in count_TE_identifiers.keys():
+                                count_TE_identifiers[TEidClassFam]+=1
+                            else:
+                                count_TE_identifiers[TEidClassFam]=1
                 else:
                     #If not stringent, apply the divergence, insertion, and deletion limits.
                     if div <= max_div and ins <= max_ins and del_ <= max_del:
-                        if TEe < 0 or TEs < 0 or TEleft < 0:
+                        if TEe < 0 or TEs < 0
                             log(f"[TRACE] Invalid consensus coordinates: TEs={TEs}, TEe={TEe}, TEleft={TEleft} for TE {id_} in {genomeFilePrefix}. Skipping.", 3, verbose)
                             continue
                         log(f"[TRACE2] LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 4, verbose)
