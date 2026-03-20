@@ -375,6 +375,39 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         qcov = length_hsp_merged / qlen
         scov = length_hsp_merged / slen
 
+        # Deal with near duplicates before removing nested seqs
+        dup_cov = 0.95
+        dup_ident = 0.95
+        if qcov >= dup_cov and scov >= dup_cov and scaled_iden >= dup_ident:
+            if slen < qlen:
+                log(
+                    f"[TRACE] iteration {iteration} Removing shorter near-duplicate "
+                    f"Query {sequence_id} ({qlen}) Subject {subject} ({slen}): "
+                    f"qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}",
+                    3, verbose
+                )
+                touched_TEs[subject] = 1
+                changed = True
+                if stat_list is not None:
+                    stat_list.append(
+                        f"{sequence_id}\t{subject}\tIter{iteration}\tDiscardedNearDuplicate\t"
+                        f"qcov={qcov:.3f}\tscov={scov:.3f}\tidentity={scaled_iden:.3f}"
+                    )
+            elif slen == qlen and subject > sequence_id:
+                # deterministic tie-breaker
+                log(
+                    f"[TRACE] iteration {iteration} Removing tied near-duplicate "
+                    f"Query {sequence_id} ({qlen}) Subject {subject} ({slen})",
+                    3, verbose
+                )
+                touched_TEs[subject] = 1
+                changed = True
+                if stat_list is not None:
+                    stat_list.append(
+                        f"{sequence_id}\t{subject}\tIter{iteration}\tDiscardedNearDuplicateTie\t"
+                        f"qcov={qcov:.3f}\tscov={scov:.3f}\tidentity={scaled_iden:.3f}"
+                    )
+            continue #We had a near duplicate, so we skip the rest of the processing for this subject
         # Calculate subject-specific scaled identity
         aln_iden = iden_stats.get(subject, [])
         total_len = sum(l for l, _ in aln_iden)
@@ -504,9 +537,6 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
                 count_changed += 1
                 tf.write(f"{te_id}\n")
         log(f"[INFO] Wrote touched IDs for iteration {iteration+1} to {touched_file}", 2, verbose)
-
-        # REMOVE Count how many sequences changed in this iteration
-        # REMOVE count_changed = sum(1 for x in results if x)
 
         if not any(results):
             log(f"[INFO] Saturated: no further changes at iteration {iteration}", 1, verbose)
