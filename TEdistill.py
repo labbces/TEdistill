@@ -375,9 +375,14 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         qcov = length_hsp_merged / qlen
         scov = length_hsp_merged / slen
 
+        # Calculate subject-specific scaled identity
+        aln_iden = iden_stats.get(subject, [])
+        total_len = sum(l for l, _ in aln_iden)
+        scaled_iden = sum(l * i for l, i in aln_iden) / total_len if total_len > 0 else 0
+
         # Deal with near duplicates before removing nested seqs
         dup_cov = 0.95
-        dup_ident = 0.95
+        dup_ident = 95
         if qcov >= dup_cov and scov >= dup_cov and scaled_iden >= dup_ident:
             if slen < qlen:
                 log(
@@ -408,10 +413,6 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
                         f"qcov={qcov:.3f}\tscov={scov:.3f}\tidentity={scaled_iden:.3f}"
                     )
             continue #We had a near duplicate, so we skip the rest of the processing for this subject
-        # Calculate subject-specific scaled identity
-        aln_iden = iden_stats.get(subject, [])
-        total_len = sum(l for l, _ in aln_iden)
-        scaled_iden = sum(l * i for l, i in aln_iden) / total_len if total_len > 0 else 0
 
         #log(f"[TRACE] Query {sequence_id} Subject {subject}, {len(hsps[subject])} HSPs → {len(merged_hsps)} merged (offset={offset}): qcov={qcov:.3f}, scov={scov:.3f}, scaled_iden={scaled_iden:.2f}, merged_count={merged_count}", 3, verbose)
         
