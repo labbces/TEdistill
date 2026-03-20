@@ -456,7 +456,8 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
                 if stat_list is not None:
                     stat_list.append(f"{subject}\tIter{iteration}\tDiscarded (too short after cleaning)")
         else:
-            keep_TEs[subject] = str(fasta_dict[subject].seq)
+            if subject not in keep_TEs:
+                keep_TEs[subject] = str(fasta_dict[subject].seq)
 
     os.remove(output_blast_file)
     return changed
