@@ -475,11 +475,6 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
     else:
         log(f"[INFO] Resuming from iteration {iteration}", 1, verbose)
 
-    manager = Manager()
-    keep_TEs = manager.dict()
-    touched_TEs = manager.dict()
-    discarded_TEs = manager.dict()
-    stat_list = manager.list() if stat_file else None
 
     # Track consecutive 'small-change' iterations for extra saturation:
     consecutive_small_iters = 0
@@ -488,6 +483,13 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         fileiter = f'{iteration_path}/distilledTE.flTE.iter{iteration}.fa'
         current_records = SeqIO.to_dict(SeqIO.parse(fileiter, "fasta"))
         sequence_ids = list(current_records.keys())
+
+        manager = Manager()
+        keep_TEs = manager.dict()
+        touched_TEs = manager.dict()
+        discarded_TEs = manager.dict()
+        stat_list = manager.list() if stat_file else None
+        
         dbprefix = fileiter
         count_changed = 0
         if mode_blastdb == 'db':
@@ -592,8 +594,6 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
             log_file.write(line)
 
         iteration += 1
-        keep_TEs.clear()
-        touched_TEs.clear()
     
     # Path to the file from the last iteration
     final_iteration_file = f'{iteration_path}/distilledTE.flTE.iter{iteration}.fa'
