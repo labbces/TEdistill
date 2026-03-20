@@ -176,7 +176,7 @@ def rename_and_uppercase_fasta_ids(fasta_path,out_path,verbose=1):
     
     log(f"[INFO] IDs partially converted in: {out_fasta} (original saved as {orig_path})", 1, verbose)
 
-def find_expected_files(in_path, out_path, suffixes,identifiers, verbose):
+def find_expected_files(in_path, out_path, suffixes, identifiers, verbose):
     countOK=0
     for identifier in identifiers:
         for suffix in suffixes:
@@ -682,7 +682,7 @@ def main():
         return
 
     #Finds matching files
-    found_files = find_expected_files(args.in_path, args.out_path, genomeFilePrefixes, args.verbose)
+    found_files = find_expected_files(args.in_path, args.out_path, fileSuffixes, genomeFilePrefixes, args.verbose)
 
     if not found_files:
         log(f"[CRITICAL] Some files are missing. Check your input", 0, args.verbose)
