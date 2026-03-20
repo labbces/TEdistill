@@ -72,7 +72,7 @@ def log (msg, level=1,  verbose=0):
     # 1 Normal INFO     Key steps, progress messages
     # 2 Debug  DEBUG    Extra info: file paths, filtered seqs
     # 3 Trace  TRACE    Fine-grained steps. per-TE messages, etc
-	# 4 Trace2 TRACE2   More fine-grained steps
+    # 4 Trace2 TRACE2   More fine-grained steps
     if verbose >= level:
         print(msg, flush=True)
 
@@ -110,7 +110,7 @@ def merge_hsps(hsps, offset=7):
     if not hsps:
         return merged, 0
 
-    current = hsps[0]
+    current = list(hsps[0]) 
     merged_count = 0
 
     for hsp in hsps[1:]:
@@ -119,7 +119,7 @@ def merge_hsps(hsps, offset=7):
             current = hsp
         else:
             if hsp[1] > current[1]:
-                current[1] = hsp[1]
+                current = [current[0], max(current[1], hsp[1])]
                 merged_count += 1
     merged.append(current)
     return merged, merged_count
@@ -244,10 +244,13 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                 #TODO: Remove classification information
                 TEidClassFam= f'{id_.upper()}#{type_}'
 
-                #Apply stringent conditions if stringent == 1.
-                if strict == 1:
+                #Apply stringent conditions if strict was selected (boolean).
+                if strict:
                     #If stringent, only allow if divergence, insertion, and deletion are all zero.
                     if div == 0 and ins == 0 and del_ == 0:
+                        if TEidClassFam not in TE_fasta:
+                            log(f"[WARN] TE {TEidClassFam} not found in {teSequenceFile}, skipping.", 2, verbose)
+                            continue
                         full_len, length = 0, 0
                         full_len = len(TE_fasta[TEidClassFam].seq)
                         length = TEe - TEs + 1
@@ -266,6 +269,9 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
                         log(f"[TRACE2] LENIENT {chr_} {start} {end} {id_} {type_} {TEleft} {TEe} {TEs})", 4, verbose)
                         full_len, length = 0, 0
                         #Calculate full length and actual length for strand "+".
+                        if TEidClassFam not in TE_fasta:
+                            log(f"[WARN] TE {TEidClassFam} not found in {teSequenceFile}, skipping.", 2, verbose)
+                            continue
                         full_len = len(TE_fasta[TEidClassFam].seq)
                         length = TEe - TEs + 1
                         #Ensure the length/full_length ratio is above the minimum coverage.
@@ -341,9 +347,9 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         log(f"[CRITICAL] BLAST failed for {sequence_id}: {res_blastn.returncode}", 0, verbose)
         log(f"[CRITICAL] BLAST failed for {sequence_id}: {res_blastn.stderr}", 0, verbose)
         log(f"[CRITICAL] BLAST failed for {sequence_id}: {res_blastn.stdout}", 0, verbose)
-        raise SystemExit(
-                log(f"[FATAL] BLASTN failed for sequence {sequence_id} on iteration {iteration}",0 , verbose)
-        )
+
+        log(f"[FATAL] BLASTN failed for sequence {sequence_id} on iteration {iteration}",0 , verbose)
+        raise SystemExit(1)
     os.remove(temp_fasta)
     #return
 
@@ -511,15 +517,15 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
             if res_makeblastdb.returncode not in (0, 3):
                 log(f"[FATAL] MAKEBLASTDB failed for file {fileiter}: {res_makeblastdb.stdout}, with return code: {res_makeblastdb.returncode}", 0, verbose)
                 log(f"[FATAL] MAKEBLASTDB STDERR: {res_makeblastdb.stderr}", 0, verbose)
-                raise SystemExit(
-                    log(f"[FATAL] MAKEBLASTDB failed for file {fileiter}",0 , verbose)
-                )
+                log(f"[FATAL] MAKEBLASTDB failed for file {fileiter}",0 , verbose)
+                raise SystemExit(1)
 
             # Checkin that blast index files are present and non-empty
             idx = [dbprefix + ext for ext in (".nhr", ".nin", ".nsq")]
             missing = [p for p in idx if not (os.path.exists(p) and os.path.getsize(p) > 0)]
             if missing:
-                raise SystemExit("[FATAL] Missing/empty BLAST index files:\n  " + "\n  ".join(missing))
+                log(f"[FATAL] Missing or empty BLAST index files for {fileiter} after makeblastdb: " + ", ".join(missing), 0, verbose)
+                raise SystemExit(1)
 
 #            if res_makeblastdb.returncode == 3 or val_blastdb.returncode == 3:
             if res_makeblastdb.returncode == 3:
@@ -547,7 +553,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
                     continue
                 elif te_id in keep_TEs:
                     log(f"[TRACE] iteration {iteration} Keeping cleaned version of {te_id} (marked for keep)", 3, verbose)
-                    seqstr = trim_terminal_ns(Seq(keep_TEs[te_id])) # Making sure no terminal Ns are present
+                    seqstr = trim_terminal_ns(keep_TEs[te_id]) # Making sure no terminal Ns are present
                 else:
                     log(f"[TRACE] iteration {iteration} Keeping original version of {te_id} (not marked for keep or discard)", 3, verbose)
                     seqstr = trim_terminal_ns(str(current_records[te_id].seq)) # Making sure no terminal Ns are present and we do not skip sequences that were not touched in this iteration
@@ -578,7 +584,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
             else:
                 consecutive_small_iters = 0
 
-	    # Check for saturation conditions
+        # Check for saturation conditions
             if consecutive_small_iters >= sat_iters and count_changed <= sat_maxseq:
                 log(f"[INFO] Saturation conditions met at iteration {iteration+1}", 1, verbose)
                 with open(os.path.join(out_path, "log_iterations.txt"), "a") as log_file:
@@ -622,7 +628,8 @@ def join_and_rename(in_path,out_path,genomeFilePrefixes):
     for genomeFilePrefix in genomeFilePrefixes:
         in_flTE=f'{out_path}/{genomeFilePrefix}.flTE.fa'
         mapids_flTE = f'{out_path}/{genomeFilePrefix}.flTE.mapids'
-        with open(mapids_flTE, 'w') as map_file, open(in_flTE,'r') as f, open(out_flTE,'a') as o:
+        open_mode = 'w' if genomeFilePrefix == genomeFilePrefixes[0] else 'a'
+        with open(mapids_flTE, 'w') as map_file, open(in_flTE, 'r') as f, open(out_flTE, open_mode) as o:
             for record in SeqIO.parse(f, "fasta"):
                 #print(record.id)
                 countTEs+=1
