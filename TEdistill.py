@@ -543,10 +543,13 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
         with open(outDistilled, "w") as o:
             for te_id in sequence_ids:
                 if te_id in discarded_TEs:
+                    log(f"[TRACE] iteration {iteration} Discarding {te_id} (marked for discard)", 3, verbose)
                     continue
                 elif te_id in keep_TEs:
+                    log(f"[TRACE] iteration {iteration} Keeping cleaned version of {te_id} (marked for keep)", 3, verbose)
                     seqstr = trim_terminal_ns(Seq(keep_TEs[te_id])) # Making sure no terminal Ns are present
                 else:
+                    log(f"[TRACE] iteration {iteration} Keeping original version of {te_id} (not marked for keep or discard)", 3, verbose)
                     seqstr = trim_terminal_ns(str(current_records[te_id].seq)) # Making sure no terminal Ns are present and we do not skip sequences that were not touched in this iteration
 
                 newrecord = SeqRecord(Seq(seqstr), id=te_id, description='')
