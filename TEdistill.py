@@ -77,7 +77,7 @@ def log (msg, level=1,  verbose=0):
         print(msg, flush=True)
 
 def blast_wrapper(args):
-    (sequence_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
+    (sequence_id, fileiter, blast_output_dir, keep_TEs, touched_TEs, discarded_TEs,
      minhsplen, minhspident, minlen, iteration, out_path, coverage, offset, stat_list, mode_blastdb, verbose) = args
 
     local_fasta_dict = SeqIO.to_dict(SeqIO.parse(fileiter, "fasta"))
@@ -88,6 +88,7 @@ def blast_wrapper(args):
         blast_output_dir,
         keep_TEs,
         touched_TEs,
+        discarded_TEs,
         minhsplen,
         minhspident,
         minlen,
@@ -304,7 +305,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
 
 #Final file *flTE.fa
 
-def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, minhsplen, minhspident, minlen,
+def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, discarded_TEs, minhsplen, minhspident, minlen,
               iteration, out_path, fileiter, coverage=0.95, offset=7, stat_list=None, mode_blastdb='subject', verbose=1):
     log(f"[DEBUG] Processing sequence {sequence_id} for iteration {iteration}", 2, verbose)
 
@@ -385,6 +386,8 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
         dup_ident = 95
         if qcov >= dup_cov and scov >= dup_cov and scaled_iden >= dup_ident:
             if slen < qlen:
+                if subject in keep_TEs:
+                    del keep_TEs[subject]
                 log(
                     f"[TRACE] iteration {iteration} Removing shorter near-duplicate "
                     f"Query {sequence_id} ({qlen}) Subject {subject} ({slen}): "
@@ -392,6 +395,7 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
                     3, verbose
                 )
                 touched_TEs[subject] = 1
+                discarded_TEs[subject] = 1
                 changed = True
                 if stat_list is not None:
                     stat_list.append(
@@ -400,12 +404,15 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
                     )
             elif slen == qlen and subject > sequence_id:
                 # deterministic tie-breaker
+                if subject in keep_TEs:
+                    del keep_TEs[subject]
                 log(
                     f"[TRACE] iteration {iteration} Removing tied near-duplicate "
                     f"Query {sequence_id} ({qlen}) Subject {subject} ({slen})",
                     3, verbose
                 )
                 touched_TEs[subject] = 1
+                discarded_TEs[subject] = 1
                 changed = True
                 if stat_list is not None:
                     stat_list.append(
@@ -432,7 +439,10 @@ def blast_seq(sequence_id, fasta_dict, blast_output_dir, keep_TEs, touched_TEs, 
                 if stat_list is not None:
                     stat_list.append(f"{sequence_id}\t{subject}\tIter{iteration}\tCleaned\tqcov={qcov:.3f}\tscov={scov:.3f}\tidentity={scaled_iden:.3f}\tmerged={merged_count}")
             elif len(subjectseq_str) < minlen:
+                if subject in keep_TEs:
+                    del keep_TEs[subject]
                 touched_TEs[subject] = 1
+                discarded_TEs[subject] = 1
                 changed = True
                 if stat_list is not None:
                     stat_list.append(f"{subject}\tIter{iteration}\tDiscarded (too short after cleaning)")
@@ -468,6 +478,7 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
     manager = Manager()
     keep_TEs = manager.dict()
     touched_TEs = manager.dict()
+    discarded_TEs = manager.dict()
     stat_list = manager.list() if stat_file else None
 
     # Track consecutive 'small-change' iterations for extra saturation:
@@ -475,6 +486,8 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
 
     while True:
         fileiter = f'{iteration_path}/distilledTE.flTE.iter{iteration}.fa'
+        current_records = SeqIO.to_dict(SeqIO.parse(fileiter, "fasta"))
+        sequence_ids = list(current_records.keys())
         dbprefix = fileiter
         count_changed = 0
         if mode_blastdb == 'db':
@@ -511,11 +524,8 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
             log(f"[INFO] Created blastdb iteration {iteration}", 1, verbose)
 #            log(f"[TRACE] Created blastdb iteration {iteration}:\n {res_makeblastdb.stdout}", 3, verbose)
 
-        with open(fileiter, "r") as f:
-            sequence_ids = [record.id for record in SeqIO.parse(f, "fasta")]
-
         task_args = [
-            (seq_id, fileiter, blast_output_dir, keep_TEs, touched_TEs,
+            (seq_id, fileiter, blast_output_dir, keep_TEs, touched_TEs, discarded_TEs,
              minhsplen, minhspident, minlen, iteration, out_path,
              coverage, offset, stat_list, mode_blastdb, verbose)
             for seq_id in sequence_ids
@@ -526,9 +536,15 @@ def remove_nested_sequences(in_path, out_path, minhsplen, minhspident, minlen, n
 
         outDistilled = f'{iteration_path}/distilledTE.flTE.iter{iteration+1}.fa'
         with open(outDistilled, "w") as o:
-            for TE in keep_TEs:
-                seqstr = trim_terminal_ns(Seq(keep_TEs[TE])) # Making sure no terminal Ns are present
-                newrecord = SeqRecord(Seq(seqstr), id=TE, description='')
+            for te_id in sequence_ids:
+                if te_id in discarded_TEs:
+                    continue
+                elif te_id in keep_TEs:
+                    seqstr = trim_terminal_ns(Seq(keep_TEs[te_id])) # Making sure no terminal Ns are present
+                else:
+                    seqstr = trim_terminal_ns(str(current_records[te_id].seq)) # Making sure no terminal Ns are present and we do not skip sequences that were not touched in this iteration
+
+                newrecord = SeqRecord(Seq(seqstr), id=te_id, description='')
                 SeqIO.write(newrecord, o, "fasta")
 
         # Write touched IDs for this iteration
