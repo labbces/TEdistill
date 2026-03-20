@@ -135,7 +135,7 @@ def read_identifiers(file):
         print(f'File {file} not found.')
         return []
 
-def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
+def rename_and_uppercase_fasta_ids(fasta_path,out_path,verbose=1):
     """
     Renames the original FASTA file to .orig and creates a new one with:
     - The left part of '#' (family) is changed to uppercase
@@ -152,10 +152,13 @@ def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
             print(f"File not found: {fasta_path}")
         return
     
-    orig_path = f"{fasta_path}.orig"
-    os.rename(fasta_path, orig_path)
+    basename = os.path.basename(fasta_path)
+    out_fasta = os.path.join(out_path, basename)
+    orig_path = os.path.join(out_path, basename + ".orig")
     
-    with open(fasta_path, 'w') as out_handle:
+    shutil.copy2(fasta_path, orig_path)
+    
+    with open(out_fasta, 'w') as out_handle:
         for record in SeqIO.parse(orig_path, "fasta"):
             #Separate into family and class, if '#' present
             if '#' in record.id:
@@ -171,16 +174,16 @@ def rename_and_uppercase_fasta_ids(fasta_path,verbose=1):
             
             SeqIO.write(record, out_handle, "fasta")
     
-    log(f"[INFO] IDs partially converted in: {fasta_path} (original saved as {orig_path})", 1, verbose)
+    log(f"[INFO] IDs partially converted in: {out_fasta} (original saved as {orig_path})", 1, verbose)
 
-def find_expected_files(in_path, suffixes,identifiers, verbose):
+def find_expected_files(in_path, out_path, suffixes,identifiers, verbose):
     countOK=0
     for identifier in identifiers:
         for suffix in suffixes:
             filePath = f'{in_path}/{identifier}.{suffix}'
             if os.path.exists(filePath):
                 if suffix.endswith('.TEfamilies.fa'):
-                    rename_and_uppercase_fasta_ids(filePath,verbose)
+                    rename_and_uppercase_fasta_ids(filePath, out_path, verbose)
                 countOK+=1
             else:
                 print(f"File not found: {filePath}")
@@ -194,7 +197,7 @@ def get_flTE(in_path,out_path,genomeFilePrefixes,strict,max_div,max_ins,max_del,
         out_flTE=f'{out_path}/{genomeFilePrefix}.flTE.list'
         outfa_flTE=f'{out_path}/{genomeFilePrefix}.flTE.fa'
         filePath = f'{in_path}/{genomeFilePrefix}.{programtype}.RM.out'
-        teSequenceFile = f'{in_path}/{genomeFilePrefix}.{programtype}.TEfamilies.fa'
+        teSequenceFile = f'{out_path}/{genomeFilePrefix}.{programtype}.TEfamilies.fa'
         log(f"[INFO] Processing file: {filePath}", 1, verbose)
 
         #Indexing TE families fasta
@@ -676,7 +679,7 @@ def main():
         return
 
     #Finds matching files
-    found_files = find_expected_files(args.in_path, fileSuffixes, genomeFilePrefixes, args.verbose)
+    found_files = find_expected_files(args.in_path, args.out_path, genomeFilePrefixes, args.verbose)
 
     if not found_files:
         log(f"[CRITICAL] Some files are missing. Check your input", 0, args.verbose)
